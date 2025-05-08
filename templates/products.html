@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Product Lookup{% endblock %}
+
+{% block content %}
+  <h1>Products</h1>
+
+    <form method="get" action="/products">
+        <input type="text" name="query" placeholder="Search by UPC" value="{{ query }}">
+        <button type="submit">Search</button>
+    </form>
+
+    <h2>Found {{ products|length }} products</h2>
+
+    <ul>
+        {% for product in five_products %}
+            <li>
+                <strong>{{ product.name }}</strong><br>
+                UPC: {{ product.upc }}<br>
+                Category: {{ product.category }}<br>
+                Brand: {{ product.brand }}<br>
+            </li>
+        {% else %}
+            <li>No products found</li>
+        {% endfor %}
+    </ul>
+
+  <p>Total products in database: {{ products|length }}</p>
+{% endblock %}

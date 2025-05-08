@@ -1,0 +1,120 @@
+body {
+  font-family: sans-serif;
+  text-align: center;
+  padding: 50px;
+  margin: 0;
+}
+
+.hero {
+      text-align: center;
+      padding: 60px 20px;
+      background: #f0f4f8;
+}
+.navbar {
+  background-color: #333;
+  overflow: hidden;
+  padding: 0.5em;
+  text-align: center;
+}
+
+.navbar a {
+  color: white;
+  padding: 0.5em 1em;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.navbar a:hover {
+  background-color: #555;
+}
+
+
+video {
+  width: 100%;
+  max-width: 600px;
+}
+
+#scanner-container {
+      width: 100%;
+      max-width: 600px;
+      margin: auto;
+      text-align: center;
+    }
+
+
+#scan-again {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 1em;
+  display: none;
+}
+.hero-rant{
+  padding-left: 2rem;
+  padding-right: 2rem;	
+}
+
+
+/* Make sure the container takes up the full width */
+.container {
+  margin-top: 20px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Make sure the row is aligned properly */
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px; /* Space between columns */
+}
+
+/* Adjusting the column layout */
+.col-md-6 {
+  flex: 1;
+  max-width: 48%;  /* Ensures each column takes up roughly half of the space */
+}
+
+/* Styling for the scanner and the product info section */
+#scanner {
+  width: 100%;
+  height: 300px;
+  background-color: #eaeaea;
+  border: 1px solid #ccc;
+  margin-bottom: 20px;
+}
+
+#result {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+#search-links {
+  padding: 20px;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+#search-links ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+#search-links ul li {
+  margin-bottom: 10px;
+}
+
+button {
+  margin-top: 20px;
+}
+
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+

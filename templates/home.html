@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Barcode Scanning{% endblock %}
+
+{% block content %}
+  <div class="hero">
+    <h1>Empowering Consumers to Shape the Future of Shopping</h1>
+    <p>Unlock collective buying power and drive change with ethical, community-driven consumption.</p>
+  </div>
+
+  <section class="cta">
+    <div class="heroe-rant">
+    	<h2>Why Now?</h2>
+		<p>In an era marked by rising tariffs, global supply chain instability, and increasing economic isolation, communities are being pushed to adapt in real time. Products are harder to find, prices fluctuate wildly, and trust in centralized retail systems continues to erode.</p>
+		<p>Shopidarity exists to counter this uncertainty.</p>
+		<p>By building a cooperative product library rooted in shared knowledge and mutual aid, we're empowering people to find and share what they need locally — without being at the mercy of distant markets or opaque systems.</p>
+		<p>This is a time for connection over competition, for shared resilience over isolated survival. When the shelves are empty and the rules keep changing, community sourcing isn't just a nice idea — it's essential.</p>
+        <h2>Join the Movement</h2>
+        <p>Explore how we’re transforming consumer habits into powerful collective actions for a fairer, more sustainable economy.</p>
+        <div class="cta-buttons">
+            <a href="/scan" class="cta-button">Try Our Scanning Tool</a> - 
+            <a href="#vision-section" class="cta-button">Read the White Paper</a> - 
+            <a href="#join" class="cta-button">Join the Movement</a>
+        </div>
+    </div>
+  </section>
+  
+  <div class="container">
+    <h2>How It Works</h2>
+    <ol>
+        <li><strong>Scan and Track:</strong> Use our scanning tool to start building your purchase history.</li>
+        <li><strong>Organize and Connect:</strong> Find like-minded consumers, build groups, and make collective decisions.</li>
+        <li><strong>Take Action:</strong> Leverage collective buying power to negotiate better deals or push for corporate accountability.</li>
+    </ol>
+  </div>
+  <div id="vision-section" class="section">
+    <h2>Our Vision</h2>
+    <p>We believe consumer choice can become collective power. Shopidarity is building tools to help people coordinate around the products they buy — not just for savings, but to build alternatives to extractive markets.</p>
+    <p>
+      📄 <a href="{{ url_for('static', filename='whitepaper.pdf') }}" target="_blank">Download the Shopidarity White Paper (PDF)</a>
+    </p>
+  </div>
+
+  <div class="section" id="join">
+    <h2>Join Our Mailing List</h2>
+    <p>Be the first to try new features, join user experiments, and help shape the future of ethical consumer organizing.</p>
+    <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSe3NYxM44s40Mr98wu1bH1nIw7nciIi_n_zpp_8WfEZREEBJw/viewform?embedded=true" width="640" height="1073" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
+  </div>
+
+  <section id="who-we-are" class="info-section">
+        <div class="container">
+            <h2>Who We Are</h2>
+            <p>Shopidarity is driven by a team of passionate individuals committed to ethical consumerism. Join us in creating the future of ethical consumerism.</p>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Shopidarity. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+{% endblock %}
+

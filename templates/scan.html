@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Barcode Scanning{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <div class="row">
+      <!-- Left column: Scanner Interface -->
+      <div class="col-md-6" id="scanner-container">
+        <h1>Scan a Product Barcode</h1>
+        <p>Hold the barcode still in the center of the frame.</p>
+        <p>This prototype may be prone to error if you move the barcode, please scan again if it gets it wrong.</p>
+        <div id="scanner"></div>
+        <div id="result">Waiting for scan...</div>
+        <button id="scan-again">Scan Another</button>
+      </div>
+
+      <!-- Right column: Search Links & Add Product Prompt -->
+      <div class="col-md-6" id="product-info">
+        <div id="search-links" style="display: none;">
+          <h3>Product Information</h3>
+          <p>Before adding this product to Shopidarity, we recommend checking external sources to verify the product details:</p>
+          <ul>
+            <li><a href="#" id="google-link" target="_blank">Search on Google</a></li>
+            <li><a href="#" id="amazon-link" target="_blank">Search on Amazon</a></li>
+            <li><a href="#" id="openfoodfacts-link" target="_blank">Search on World Food Facts</a></li>
+          </ul>
+          <p id="add-product-prompt" style="display: none;">
+            <em>This product is not yet in the Shopidarity library.</em><br>
+            <a href="#" id="add-product-link">Add this product</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QuaggaJS Library -->
+  <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
+  <script>
+    const resultEl = document.getElementById('result');
+    const scanAgainBtn = document.getElementById('scan-again');
+    const searchLinksEl = document.getElementById('search-links');
+    const googleLink = document.getElementById('google-link');
+    const amazonLink = document.getElementById('amazon-link');
+    const openfoodfactsLink = document.getElementById('openfoodfacts-link');
+    const addProductPrompt = document.getElementById('add-product-prompt');
+    const addProductLink = document.getElementById('add-product-link');
+
+    function startScanner() {
+      resultEl.textContent = "Waiting for scan...";
+      scanAgainBtn.style.display = "none";
+
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: document.querySelector('#scanner'),
+          constraints: {
+            facingMode: "environment"
+          }
+        },
+        decoder: {
+          readers: ["upc_reader", "upc_e_reader"]
+        }
+      }, function(err) {
+        if (err) {
+          console.error(err);
+          resultEl.textContent = "Error starting scanner";
+          return;
+        }
+        Quagga.start();
+      });
+    }
+
+    Quagga.onDetected(data => {
+      const code = data.codeResult.code;
+      fetch(`/api/check_upc/${code}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.exists) {
+            resultEl.innerHTML = `Detected UPC: ${code}`;
+            searchLinksEl.style.display = "block";
+            googleLink.href = `https://www.google.com/search?q=${code}`;
+            amazonLink.href = `https://www.amazon.com/s?k=${code}`;
+            openfoodfactsLink.href = `https://world.openfoodfacts.org/product/${code}`;
+            addProductPrompt.style.display = "none";
+          } else {
+            resultEl.innerHTML = `Detected UPC: ${code}`;
+            searchLinksEl.style.display = "block";
+            googleLink.href = `https://www.google.com/search?q=${code}`;
+            amazonLink.href = `https://www.amazon.com/s?k=${code}`;
+            openfoodfactsLink.href = `https://world.openfoodfacts.org/product/${code}`;
+            addProductPrompt.style.display = "block";
+            addProductLink.href = `/add-product?upc=${code}`;
+          }
+        });
+
+      // Stop scanner shortly after detection
+      setTimeout(() => {
+        Quagga.stop();
+        document.querySelector('#scanner').innerHTML = ''; // Clear video
+        scanAgainBtn.style.display = "inline-block";
+      }, 500);
+    });
+
+    scanAgainBtn.addEventListener('click', () => {
+      startScanner();
+    });
+
+    // Start scanner on load
+    startScanner();
+  </script>
+{% endblock %}

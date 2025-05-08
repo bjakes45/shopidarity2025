@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Shopidarity{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+	<h1>SHOPIDARITY</h1>
+  <nav class="navbar">
+    <a href="/">Home</a>
+    <a href="/scan">Scan</a>
+    <a href="/products">Products</a>
+    <!-- Future: <a href="/profile">Profile</a> -->
+  </nav>
+
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
