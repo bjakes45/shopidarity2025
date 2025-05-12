@@ -12,11 +12,21 @@
     {% endif %}
   </aside>
 	
-  <p><strong>{{ product.name}}</strong></br> {{ product.upc}}</p>
+  <p><strong>{{ product.name}}</strong></br> {{ product.upc}} </br>
+  {% if average_price %}
+    Average Price: ${{ "%.2f"|format(average_price) }} 
+      {% if product.deals|length == 1 %}
+        <a href="{{ url_for('product_deals', upc=product.upc) }}">({{ product.deals|length }} Result)</a>
+      {% else %}
+        <a href="{{ url_for('product_deals', upc=product.upc) }}">({{ product.deals|length }} Results)</a>
+      {% endif %}
+  {% endif %}
+  </p>
 
 </div>
 
-{% if product.status == 'approved' %}
+{% if product.status.value == "approved" %}
+
   {% if current_user.is_authenticated %}
   <div class="flex flex-wrap gap-4 items-center mt-2">
     <!-- Favorite / Unfavorite -->
@@ -89,11 +99,4 @@
   <h2>Product Pending Approval</h2>
 {% endif %}
 
-<ul>
-{% for deal in deals %}
-  <li>{{ deal.store }} - ${{ "%.2f"|format(deal.price) }} ({{ deal.source }})</li>
-{% else %}
-  <li>No deals found.</li>
-{% endfor %}
-</ul>
 {% endblock %}

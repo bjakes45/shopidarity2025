@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import csv, requests
 from datetime import datetime
-from sqlalchemy import func
+from sqlalchemy import func, or_
 import geopy
 from geopy.geocoders import Nominatim
 import json
@@ -121,7 +121,7 @@ def scan():
 #PRODUCTS
 @app.route('/products', methods=['GET'])
 def products():
-    products_all = Product.query.filter_by(status=ProductStatus.APPROVED).all()
+    products_all = Product.query.all()
 
     query = request.args.get('query', '')  # Retrieve UPC query if available
 
@@ -131,7 +131,14 @@ def products():
     products = Product.query.filter_by(status=ProductStatus.APPROVED)
     
     if query:
-        products = Product.query.filter(Product.upc.contains(query)).filter_by(status=ProductStatus.APPROVED)
+        products = Product.query.filter(
+        or_(
+            Product.upc.ilike(f"%{query}%"),
+            Product.name.ilike(f"%{query}%"),
+            Product.description.ilike(f"%{query}%"),
+            Product.category.ilike(f"%{query}%")
+        )
+).filter_by(status=ProductStatus.APPROVED)
     
     pagination = products.paginate(page=page, per_page=per_page)
     
@@ -143,7 +150,13 @@ def product_detail(upc):
     product = Product.query.filter_by(upc=upc).first_or_404()
     average_rating = db.session.query(func.avg(Rating.score)).filter_by(product_upc=upc).scalar()
     comments = Comment.query.filter_by(product_upc=upc, is_public=True).order_by(Comment.timestamp.desc()).limit(3).all()
-    deals = product.deals
+    average_price = None	
+    total_price = 0
+    
+    for deal in product.deals:
+        total_price += deal.price
+        if len(product.deals) > 0:
+        	average_price = total_price / len(product.deals)  
 
 	# If logged in, pull user-specific data
     favorite = rating = private_comments = None
@@ -153,7 +166,7 @@ def product_detail(upc):
 	    private_comments = Comment.query.filter_by(user_id=current_user.id, product_upc=upc, is_public=False).all()
     
 
-    return render_template('products/product_detail.html', product=product, average_rating=average_rating, comments=comments, favorite=favorite, rating=rating, private_comments=private_comments, deals=deals)
+    return render_template('products/product_detail.html', product=product, average_rating=average_rating, comments=comments, favorite=favorite, rating=rating, private_comments=private_comments, average_price=average_price)
 
 #PRODUCT Nutrifacts
 @app.route('/products/<string:upc>/nutrifacts')
@@ -165,6 +178,17 @@ def product_nutrifacts(upc):
     
 
     return render_template('products/product_nutrifacts.html', product=product)
+
+#PRODUCT Deals
+@app.route('/products/<string:upc>/deals')
+def product_deals(upc):
+    product = Product.query.filter_by(upc=upc).first_or_404()
+
+    if product.deals == None: 
+    	redirect(url_for('product_detail', upc=product.upc))
+    
+
+    return render_template('products/product_deals.html', product=product)
 
 #PRODUCT COMMENTS
 @app.route('/products/<string:upc>/comments')
@@ -181,7 +205,6 @@ def product_comments(upc):
 
 #NEW PRODUCT
 @app.route('/products/new', methods=['GET', 'POST'])
-@login_required_with_redirect_back
 def new_product():
     ip_address = request.remote_addr
     if not is_rate_limited(ip_address):

@@ -12,6 +12,9 @@
       {% if product.nutriments %}
         <a href="{{ url_for('product_nutrifacts', upc=product.upc) }}" class="block text-blue-600 hover:underline">Nutrifacts</a>
       {% endif %}
+      {% if product.deals %}
+        <a href="{{ url_for('product_deals', upc=product.upc) }}" class="block text-blue-600 hover:underline">Deals</a>
+      {% endif %}
     </nav>
   </aside>
 
