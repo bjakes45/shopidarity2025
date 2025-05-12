@@ -11,6 +11,11 @@ from sqlalchemy import func
 import geopy
 from geopy.geocoders import Nominatim
 import json
+from dotenv import load_dotenv
+import os
+
+
+load_dotenv()
 
 #APP CONTEXT
 API_USAGE = {
@@ -86,7 +91,7 @@ def seed_products():
 
 #Init server and database connection
 app = Flask(__name__)
-app.secret_key = '5d1dc1254e2d412d73005c3d5f57c0a8d7126af55b6d52bb28314c30ec0700ee'
+app.secret_key = os.getenv("SECRET_KEY")
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 

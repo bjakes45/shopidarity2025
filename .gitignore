@@ -1,0 +1,24 @@
+# Bytecode and cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment
+.env
+
+# Database
+instance/*.db
+*.sqlite3
+
+# VS Code settings
+.vscode/
+
+# Flask instance folders
+instance/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
