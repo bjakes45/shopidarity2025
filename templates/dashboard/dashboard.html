@@ -1,0 +1,59 @@
+{% extends "dashboard/base.html" %}
+{% block dashboard %}
+    <!-- Favorites -->
+    <section id="favorites">
+      <h3 class="text-2xl font-bold mb-4">My Recent Favorites</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for fav in favorites %}
+          <div class="bg-white p-4 rounded-xl shadow hover:shadow-md">
+            <a href="{{ url_for('product_detail', upc=fav.product.upc) }}" class="text-lg font-semibold text-blue-700 hover:underline">
+              {{ fav.product.name }}
+            </a>
+          </div>
+        {% else %}
+          <p>No favorites yet.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Ratings -->
+    <section id="ratings">
+      <h3 class="text-2xl font-bold mb-4">My Recent Ratings</h3>
+      <ul class="space-y-3">
+        {% for rating in ratings %}
+          <li class="bg-white p-4 rounded-xl shadow">
+            <div class="flex justify-between">
+              <a href="{{ url_for('product_detail', upc=rating.product.upc) }}" class="font-medium text-blue-600 hover:underline">
+                {{ rating.product.name }}
+              </a>
+              <span class="text-yellow-500 font-bold">{{ rating.score }}/5</span>
+            </div>
+            <p class="text-gray-500 text-sm">Rated on {{ rating.timestamp.strftime('%Y-%m-%d') }}</p>
+          </li>
+        {% else %}
+          <p>No ratings yet.</p>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <!-- Comments -->
+    <section id="comments">
+      <h3 class="text-2xl font-bold mb-4">My Recent Comments</h3>
+      <ul class="space-y-3">
+        {% for comment in comments %}
+          <li class="bg-white p-4 rounded-xl shadow">
+            <div class="flex justify-between">
+              <a href="{{ url_for('product_detail', upc=comment.product.upc) }}" class="font-medium text-blue-600 hover:underline">
+                {{ comment.product.name }}
+              </a>
+              <span class="text-sm text-gray-400">{{ comment.timestamp.strftime('%Y-%m-%d') }}</span>
+            </div>
+            <p class="mt-2">{{ comment.text }}</p>
+            <p class="text-xs text-gray-500 italic">Visibility: {{ 'Public' if comment.is_public else 'Private' }}</p>
+          </li>
+        {% else %}
+          <p>No comments yet.</p>
+        {% endfor %}
+      </ul>
+    </section>
+{% endblock %}

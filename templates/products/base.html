@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Product {{ product.upc}}{% endblock %}
+
+{% block content %}
+
+<div class="flex">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-gray-100 min-h-screen p-4">
+    <h2 class="text-xl font-semibold mb-6"><a href="{{ url_for('product_detail', upc=product.upc) }}"> UPC:{{ product.upc}} </a></h2>
+    <nav class="space-y-2">
+      <a href= "{{ url_for('product_comments', upc=product.upc) }}" class="block text-blue-600 hover:underline">All Comments</a>
+      {% if product.nutriments %}
+        <a href="{{ url_for('product_nutrifacts', upc=product.upc) }}" class="block text-blue-600 hover:underline">Nutrifacts</a>
+      {% endif %}
+    </nav>
+  </aside>
+
+<main class="flex-1 p-6 space-y-10">
+  {% block detail %}{% endblock %}
+
+</main>
+
+{% endblock %}

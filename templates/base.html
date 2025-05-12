@@ -4,18 +4,55 @@
   <meta charset="UTF-8">
   <title>{% block title %}Shopidarity{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
+
 <body>
-	<h1>SHOPIDARITY</h1>
-  <nav class="navbar">
-    <a href="/">Home</a>
-    <a href="/scan">Scan</a>
-    <a href="/products">Products</a>
-    <!-- Future: <a href="/profile">Profile</a> -->
-  </nav>
+	{% with messages = get_flashed_messages(with_categories=true) %}
+	  {% if messages %}
+	    <div id="flash-messages" class="space-y-2">
+	      {% for category, message in messages %}
+	        <div class="relative p-4 rounded text-sm text-white
+	                    {% if category == 'error' %} bg-red-600
+	                    {% elif category == 'success' %} bg-green-600
+	                    {% else %} bg-blue-600 {% endif %}">
+	          <span>{{ message }}</span>
+	          <button type="button" onclick="this.parentElement.remove()"
+	                  class="absolute top-1 right-2 text-white hover:text-gray-200">
+	            &times;
+	          </button>
+	        </div>
+	      {% endfor %}
+	    </div>
+	  {% endif %}
+	{% endwith %}
+
+  <nav class="bg-gray-800 text-white p-4 flex justify-between items-center">
+	  <div>
+	    <a href="{{ url_for('home') }}" class="text-xl font-bold">SHOPIDARITY</a>
+	    <a href="{{ url_for('products') }}" class="ml-4 hover:underline">Products</a>
+	    <a href="{{ url_for('scan') }}" class="ml-4 hover:underline">Scan</a>
+	  </div>
+
+	  <div>
+	    {% if current_user.is_authenticated %}
+	      <span class="mr-4">Hello, <a href="{{ url_for('dashboard') }}">{{ current_user.username }}!</a></span>
+	      <a href="{{ url_for('logout') }}" class="bg-red-500 px-3 py-1 rounded hover:bg-red-600">Logout</a>
+	    {% else %}
+	      <a href="{{ url_for('login') }}" class="bg-blue-500 px-3 py-1 rounded hover:bg-blue-600">Login</a>
+	    {% endif %}
+	  </div>
+	</nav>
 
   <div class="content">
     {% block content %}{% endblock %}
   </div>
+
+  <script>
+	  setTimeout(() => {
+	    document.querySelectorAll('#flash-messages > div').forEach(el => el.remove());
+	  }, 5000); // hides after 5 seconds
+	</script>
 </body>
 </html>

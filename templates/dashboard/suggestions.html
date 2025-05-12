@@ -1,0 +1,25 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Review Product Suggestions{% endblock %}
+{% block dashboard %}
+	<div class="max-w-3xl mx-auto p-6">
+	  <h1 class="text-2xl font-bold mb-4">Review Product Suggestions</h1>
+	  {% for product in products %}
+	    <div class="border p-4 mb-4 rounded shadow">
+	      <a href="{{ url_for('product_detail', upc=product.upc) }}"><h2 class="font-semibold text-lg">{{ product.name }}</h2></a>
+	      <p><strong>UPC:</strong> {{ product.upc }}</p>
+	      <p><strong>Brand:</strong> {{ product.brand }}</p>
+	      <p><strong>Category:</strong> {{ product.category }}</p>
+	      <p><strong>Description:</strong> {{ product.description }}</p>
+	      <form method="POST" action="{{ url_for('approve_suggestion', product_upc=product.upc) }}" class="inline">
+	        <button class="bg-green-600 text-white px-4 py-1 rounded" type="submit">Approve</button>
+	      </form>
+	      <form method="POST" action="{{ url_for('reject_suggestion', product_upc=product.upc) }}" class="inline ml-2">
+	        <button class="bg-red-600 text-white px-4 py-1 rounded" type="submit">Reject</button>
+	      </form>
+	    </div>
+	  {% else %}
+	    <p>No suggestions pending approval.</p>
+	  {% endfor %}
+	  <p>API Calls Today:{{ api_calls }}</p>
+	</div>
+{% endblock %}

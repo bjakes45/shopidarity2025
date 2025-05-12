@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Add New Product{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto p-6">
+  <h1 class="text-2xl font-bold mb-4">Create New Product</h1>
+  
+  <form method="POST" action="{{ url_for('new_product', upc=upc) }}" class="space-y-4">
+    <input name="name" placeholder="Product Name" required class="input" />
+    <input name="upc" placeholder="UPC" value="{{ upc }}" required class="input" />
+    <input name="brand" placeholder="Brand" class="input" />
+    <input name="category" placeholder="Category" class="input" />
+    <input name="image_url" placeholder="Image-url" type="hidden" class="input" />
+    <input name="nutriments" placeholder="Nutrifacts" type="hidden" class="input" />
+    <input name="offers" placeholder="Offers" type="hidden" class="input" />
+    <textarea name="description" placeholder="Description" class="input"></textarea>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Submit</button>
+  </form>
+</div>
+
+<!-- UPC Status Message -->
+<div id="lookup-status" class="text-sm mb-2 text-gray-600"></div>
+<!-- Product Preview Area -->
+<div id="product-preview" class="mt-4 space-y-2">
+  <img id="product-image" src="" alt="Product Image" class="w-32 h-32 object-contain hidden">
+  <div id="nutriment-data" class="text-sm text-gray-700"></div>
+  <div id="offers-data" class="text-sm text-gray-700"></div>
+</div>
+
+<script>
+  function formatNutriments(nutriments) {
+    if (!nutriments || typeof nutriments !== 'object') return "No nutrition data available.";
+
+    let html = '<ul class="list-disc pl-5">';
+    for (const [key, value] of Object.entries(nutriments)) {
+      html += `<li><strong>${key}:</strong> ${value}</li>`;
+    }
+    html += '</ul>';
+    return html;
+  }
+
+function formatOffers(offers) {
+  if (!Array.isArray(offers) || offers.length === 0) return "No offers data available.";
+
+  let html = '<ul class="list-disc pl-5">';
+  for (const offer of offers) {
+    html += `<li>
+      <strong>Merchant:</strong> ${offer.merchant || 'N/A'}<br>
+      <strong>Price:</strong> ${offer.price ? `$${offer.price}` : 'N/A'}<br>
+      <strong>Condition:</strong> ${offer.condition || 'N/A'}<br>
+      <strong>Link:</strong> <a href="${offer.link}" target="_blank">${offer.link}</a>
+    </li>`;
+  }
+  html += '</ul>';
+  return html;
+}
+
+  async function lookupUPC(upc) {
+    if (!upc) return;
+
+    const statusDiv = document.getElementById("lookup-status");
+    const imageEl = document.getElementById("product-image");
+    const nutrimentDiv = document.getElementById("nutriment-data");
+    const offersDiv = document.getElementById("offers-data");
+
+    statusDiv.textContent = "Searching... ";
+
+    try {
+      const res = await fetch(`/api/lookup-upc/${upc}`);
+      const data = await res.json();
+
+      if (!data.error) {
+        document.querySelector('input[name="name"]').value = data.data.name || '';
+        document.querySelector('input[name="brand"]').value = data.data.brand || '';
+        document.querySelector('input[name="category"]').value = data.data.category || '';
+        document.querySelector('textarea[name="description"]').value = data.data.description || '';
+        document.querySelector('input[name="image_url"]').value = data.data.image_url || '';
+        document.querySelector('input[name="nutriments"]').value = JSON.stringify(data.data.nutriments || {});
+        document.querySelector('input[name="offers"]').value = JSON.stringify(data.data.offers || {});
+
+        // Image preview
+        if (data.data.image_url) {
+          imageEl.src = data.data.image_url;
+          imageEl.classList.remove("hidden");
+        }
+
+        // Nutriment display
+        nutrimentDiv.innerHTML = formatNutriments(data.data.nutriments);
+
+        // Offers display
+        offersDiv.innerHTML = formatOffers(data.data.offers);
+        
+        if (data.source == 'OFF'){
+          statusDiv.textContent = "Data Confirmed by World Food Facts";
+        } else if (data.source == 'UPCDB') {
+          statusDiv.textContent = "Data Confirmed by UPCitemDB";
+        } else {
+          statusDiv.textContent = "Data Confirmed by unknown";
+        }
+      } else {
+        statusDiv.textContent = `No data found: ${data.error}`;
+        imageEl.classList.add("hidden");
+        nutrimentDiv.innerHTML = '';
+      }
+    } catch (err) {
+      console.error("Error fetching product info:", err);
+      statusDiv.textContent = "No data found";
+      imageEl.classList.add("hidden");
+      nutrimentDiv.innerHTML = '';
+    }
+  }
+
+   document.addEventListener("DOMContentLoaded", function () {
+    const upc = "{{ upc }}";
+    if (upc) {
+      lookupUPC(upc);
+    }
+  });
+</script>
+
+{% endblock %}

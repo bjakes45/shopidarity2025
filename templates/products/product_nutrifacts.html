@@ -1,0 +1,43 @@
+{% extends "products/base.html" %}
+{% block title %}Product {{ product.upc }}{% endblock %}
+
+{% block detail %}
+<div id="info" class="flex">
+  <aside>
+    {% if product.image_url %}
+      <img src="{{ product.image_url }}" id="image-url" class="w-48 mb-2" alt="Product Image" />
+    {% else %}
+      <p class="italic text-gray-400">No image available</p>
+    {% endif %}
+  </aside>
+
+  <p><strong>{{ product.name }}</strong><br> {{ product.upc }}</p>
+</div>
+
+<div id="nutriment-data" class="text-sm text-gray-700 mt-4"></div>
+
+<script>
+  function formatNutriments(nutriments) {
+    if (!nutriments || typeof nutriments !== 'object') return "No nutrition data available.";
+
+    let html = '<ul class="list-disc pl-5">';
+    for (const [key, value] of Object.entries(nutriments)) {
+      html += `<li><strong>${key}:</strong> ${value}</li>`;
+    }
+    html += '</ul>';
+    return html;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const nutrimentDiv = document.getElementById("nutriment-data");
+
+    try {
+      const nut = JSON.parse(`{{ product.nutriments | tojson | safe }}`);
+      nutrimentDiv.innerHTML = formatNutriments(nut);
+    } catch (e) {
+      nutrimentDiv.innerHTML = "No nutrition data available.";
+      console.error("Error parsing nutriments:", e);
+    }
+  });
+</script>
+{% endblock %}

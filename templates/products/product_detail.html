@@ -1,0 +1,99 @@
+{% extends "products/base.html" %}
+{% block title %}Product {{ product.upc}}{% endblock %}
+
+{% block detail %}
+
+<div id="info" class="flex">
+  <aside>
+    {% if product.image_url %}
+      <img src="{{ product.image_url }}" id="image-url" class="w-48 mb-2" alt="Product Image" />
+    {% else %}
+      <p class="italic text-gray-400">No image available</p>
+    {% endif %}
+  </aside>
+	
+  <p><strong>{{ product.name}}</strong></br> {{ product.upc}}</p>
+
+</div>
+
+{% if product.status == 'approved' %}
+  {% if current_user.is_authenticated %}
+  <div class="flex flex-wrap gap-4 items-center mt-2">
+    <!-- Favorite / Unfavorite -->
+    {% if favorite %}
+      <form method="post" action="{{ url_for('unfavorite', upc=product.upc) }}">
+        <button class="text-red-600 border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition">♥ Remove from Favorites</button>
+      </form>
+    {% else %}
+      <form method="post" action="{{ url_for('favorite', upc=product.upc) }}">
+        <button class="text-blue-600 border border-blue-600 px-3 py-1 rounded hover:bg-blue-50 transition">♥ Add to Favorites</button>
+      </form>
+    {% endif %}
+
+    <!-- Rating -->
+    <form method="post" action="{{ url_for('rate', upc=product.upc) }}" class="flex items-center gap-2">
+      <label for="rating">Your Rating:</label>
+      <select name="score" id="rating" class="border rounded p-1">
+        {% for i in range(1, 6) %}
+          <option value="{{ i }}" {% if rating and rating.score == i %}selected{% endif %}>{{ i }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition">Rate</button>
+    </form>
+    <div>
+      <h3 class="font-semibold">Average Rating:</h3>
+      <p class="text-yellow-600 text-xl">{{ average_rating }}</p>
+    </div>
+  </div>
+  {% else %}
+      <div class="flex flex-wrap gap-4 items-center mt-2">
+        <div>
+          <h3 class="font-semibold">Average Rating:</h3>
+          <p class="text-yellow-600 text-xl">{{ average_rating }}</p>
+        </div>
+        <div>        
+          <p class="text-gray-600 mt-4">Sign in to rate, comment, or favorite this product.</p>
+        </div>
+      </div>
+  {% endif %}
+
+  {% if current_user.is_authenticated %}
+    <!-- Add Comment Form -->
+    <form method="post" action="{{ url_for('add_comment', upc=product.upc) }}" class="mt-4">
+      <textarea name="content" class="w-full border p-2 rounded" placeholder="Leave a comment..."></textarea>
+      <label><input type="checkbox" name="is_public" checked> Public</label>
+      <button type="submit" class="ml-2 px-4 py-1 bg-blue-600 text-white rounded">Post</button>
+    </form>
+    <!-- Private Comments -->
+    {% if private_comments %}
+      <h3 class="text-lg font-semibold mt-4">Your Private Notes</h3>
+      <ul>
+        {% for comment in private_comments %}
+          <li class="border-t py-2 text-gray-700 italic">{{ comment.content }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+  <!-- Public Comments -->
+  <h2 class="text-xl font-bold mt-6"> Recent Comments</h2>
+  <ul>
+    {% for comment in comments %}
+      <li class="border-t py-2">
+        {{ comment.content }} <span class="text-gray-500 text-sm">— {{ comment.timestamp.strftime('%Y-%m-%d') }}</span>
+      </li>
+    {% else %}
+      <li class="text-gray-500">No comments yet</li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <h2>Product Pending Approval</h2>
+{% endif %}
+
+<ul>
+{% for deal in deals %}
+  <li>{{ deal.store }} - ${{ "%.2f"|format(deal.price) }} ({{ deal.source }})</li>
+{% else %}
+  <li>No deals found.</li>
+{% endfor %}
+</ul>
+{% endblock %}

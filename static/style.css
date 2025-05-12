@@ -1,20 +1,20 @@
+/* General Body Styling */
 body {
   font-family: sans-serif;
   text-align: center;
-  padding: 50px;
+  padding: 30px;
   margin: 0;
+  box-sizing: border-box;
 }
 
-.hero {
-      text-align: center;
-      padding: 60px 20px;
-      background: #f0f4f8;
-}
+/* Navbar */
 .navbar {
   background-color: #333;
   overflow: hidden;
   padding: 0.5em;
   text-align: center;
+  z-index: 100; /* Ensures navbar is always on top */
+  position: relative; /* Keeps the navbar above other content */
 }
 
 .navbar a {
@@ -28,19 +28,43 @@ body {
   background-color: #555;
 }
 
+/* Hero Section */
+.hero-background {
+  background-image: url('/static/images/hero-bulk-goods.jpg');
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+}
 
+.hero-overlay {
+  background-color: rgba(0, 0, 0, 0.5); /* Dark overlay for contrast */
+  padding: 40px;
+  border-radius: 8px;
+  max-width: 90%;
+  position: relative; /* Keeps overlay within the hero section */
+  z-index: 10; /* Ensures it's below the navbar */
+  top: 30px; /* Adjust to avoid overlap with navbar */
+}
+
+/* Video Styling */
 video {
   width: 100%;
   max-width: 600px;
 }
 
+/* Scanner Section */
 #scanner-container {
-      width: 100%;
-      max-width: 600px;
-      margin: auto;
-      text-align: center;
-    }
-
+  width: 100%;
+  max-width: 600px;
+  margin: auto;
+  text-align: center;
+}
 
 #scan-again {
   margin-top: 20px;
@@ -48,11 +72,257 @@ video {
   font-size: 1em;
   display: none;
 }
-.hero-rant{
-  padding-left: 2rem;
-  padding-right: 2rem;	
+
+/* CTA Buttons Section */
+.cta-buttons-section {
+  background-color: #fff;
+  padding: 30px 0;
+  text-align: center;
 }
 
+.cta-buttons-container {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.cta-button {
+  background-color: #007bff;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.cta-button:hover {
+  background-color: #0056b3;
+}
+
+/* Section Images */
+.section-image, .hero-image {
+  width: 100%;
+  max-width: 900px;
+  margin: 20px auto;
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* CTA Rant Section */
+.cta-rant-section {
+  background: #f9f9f9;
+  padding: 4rem 2rem;
+}
+
+.cta-rant-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .cta-rant-container {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.cta-text {
+  flex: 1;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.cta-text h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.cta-text .highlighted-subhead {
+  font-weight: bold;
+  color: #2c7a7b;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.cta-image {
+  flex: 1;
+  text-align: center;
+}
+
+.cta-image img {
+  max-width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Vision Section */
+#vision-section.section {
+  background: #ffffff;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+#vision-section img {
+  max-width: 600px;
+  width: 100%;
+  margin-bottom: 2rem;
+  border-radius: 8px;
+}
+
+#vision-section h2 {
+  font-size: 2.25rem;
+  margin-bottom: 1rem;
+}
+
+#vision-section p {
+  font-size: 1.15rem;
+  max-width: 800px;
+  margin: 0 auto 1rem;
+}
+
+#vision-section a {
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+#vision-section.vision-background {
+  background: url('/static/images/collective-network.jpg') center center / cover no-repeat;
+  color: #fff;
+  padding: 2rem 2rem;  /* Adjust padding for better spacing */
+  position: relative;
+  text-align: center;
+  z-index: 0;  /* Ensure it's properly layered */
+}
+
+#vision-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Keep the overlay if needed */
+  z-index: -1;
+}
+
+.vision-content {
+  position: relative;
+  z-index: 2;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.vision-content h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.vision-content p {
+  font-size: 1.15rem;
+  line-height: 1.6;
+}
+
+.vision-content a {
+  color: #cceeff;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.vision-button {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: #ffffffcc; /* semi-opaque white */
+  color: #1a1a1a;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.vision-button:hover {
+  background-color: #ffffffee;
+  transform: scale(1.05);
+}
+
+/* How It Works Section */
+.how-it-works {
+  padding: 4rem 2rem;
+  background-color: #f9f9f9;
+}
+
+.content-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.text-content {
+  flex: 1 1 50%;
+  min-width: 300px;
+}
+
+.image-content {
+  flex: 1 1 45%;
+  min-width: 300px;
+}
+
+.section-image {
+  width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.reverse-layout {
+  flex-direction: row-reverse;
+}
+
+/* Scoped Styles for How It Works Section Lists */
+.how-it-works ul {
+  list-style: none; /* Remove default list bullets */
+  padding: 0;
+  margin: 20px 0; /* Add margin to space out the list */
+}
+
+.how-it-works ul li {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 20px; /* Space between list items */
+  padding-left: 10px; /* Padding for the left side to align the text properly */
+}
+
+.how-it-works ul li::before {
+  content: ''; /* This adds custom bullet point-like styling */
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #005d5d; /* Customize the bullet color */
+  margin-right: 15px; /* Space between the bullet and the text */
+}
+
+.how-it-works ul li strong {
+  font-weight: bold;
+  font-size: 1.2rem; /* Slightly larger text for emphasis */
+  color: #005d5d; /* Consistent color with the bullets */
+  text-transform: uppercase; /* Make the strong text stand out */
+  margin-right: 10px; /* Space between the label and the description */
+}
+
+.how-it-works ul li p {
+  font-size: 1rem; /* Regular text size */
+  color: #333; /* Dark gray text color */
+  line-height: 1.6; /* Increase line height for better readability */
+}
 
 /* Make sure the container takes up the full width */
 .container {
@@ -117,4 +387,3 @@ a {
 a:hover {
   text-decoration: underline;
 }
-

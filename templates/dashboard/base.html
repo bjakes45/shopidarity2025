@@ -1,0 +1,24 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="flex">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-gray-100 min-h-screen p-4">
+    <h2 class="text-xl font-semibold mb-6"><a href="{{ url_for('dashboard') }}"> My Dashboard </a></h2>
+    <nav class="space-y-2">
+      <a href="{{ url_for('dashboard_favorites') }}" class="block text-blue-600 hover:underline">My Favorites</a>
+      <a href="{{ url_for('dashboard_ratings') }}" class="block text-blue-600 hover:underline">My Ratings</a>
+      <a href= "{{ url_for('dashboard_comments') }}" class="block text-blue-600 hover:underline">My Comments</a>
+      
+      </br>
+      <h2>Admin</h2>
+      <a href= "{{ url_for('dashboard_suggestions') }}" class="block text-blue-600 hover:underline">Approve Products</a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 p-6 space-y-10">
+    {% block dashboard %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

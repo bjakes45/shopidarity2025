@@ -1,0 +1,23 @@
+{% extends "dashboard/base.html" %}
+{% block dashboard %}
+    <!-- Comments -->
+    <section id="comments">
+      <h3 class="text-2xl font-bold mb-4">My Comments</h3>
+      <ul class="space-y-3">
+        {% for comment in comments %}
+          <li class="bg-white p-4 rounded-xl shadow">
+            <div class="flex justify-between">
+              <a href="{{ url_for('product_detail', upc=comment.product.upc) }}" class="font-medium text-blue-600 hover:underline">
+                {{ comment.product.name }}
+              </a>
+              <span class="text-sm text-gray-400">{{ comment.timestamp.strftime('%Y-%m-%d') }}</span>
+            </div>
+            <p class="mt-2">{{ comment.text }}</p>
+            <p class="text-xs text-gray-500 italic">Visibility: {{ 'Public' if comment.is_public else 'Private' }}</p>
+          </li>
+        {% else %}
+          <p>No comments yet.</p>
+        {% endfor %}
+      </ul>
+    </section>
+{% endblock %}
