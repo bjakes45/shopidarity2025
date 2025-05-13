@@ -115,7 +115,16 @@ def seed_plus():
 #Init server and database connection
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+if os.environ.get('RENDER'):
+    # Running on Render – require DATABASE_URL
+    database_url = os.environ.get('DATABASE_URL')
+    if not database_url:
+        raise RuntimeError("DATABASE_URL not set in environment on Render.")
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Local development fallback
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -548,7 +557,7 @@ if __name__ == '__main__':
         if Product.query.count() == 0:
 	        seed_products()
 
-        plu_count = Product.query.filter(db.func.length(Product.upc) == 4).count() == 0
+        plu_count = Product.query.filter(db.func.length(Product.upc) == 4).count()
         if plu_count == 0:
             seed_plus()
 
