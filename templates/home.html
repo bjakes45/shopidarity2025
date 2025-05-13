@@ -5,56 +5,53 @@
 <!-- Hero Section -->
 <section class="relative hero-background bg-cover bg-center h-screen flex items-center justify-center text-center text-white">
   <div class="absolute inset-0 bg-black opacity-50"></div>
-  <div class="relative z-10 px-4">
-    <h1 class="text-5xl font-bold mb-4">Empowering Consumers to Shape the Future of Shopping</h1>
-    <p class="text-xl mb-6">Unlock collective buying power and drive change with ethical, community-driven consumption.</p>
+  <div class="relative z-10 px-4 sm:px-6 lg:px-8">
+    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">Empowering Consumers to Shape the Future of Shopping</h1>
+    <p class="text-base sm:text-lg mb-6">Unlock collective buying power and drive change with ethical, community-driven consumption.</p>
     <div class="text-center">
-	    <a href="/scan" class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 mx-4 my-2 inline-block">Try Our Scanning Tool</a>
-	    <a href="#vision-section" class="cta-button bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-700 mx-4 my-2 inline-block">Read the White Paper</a>
-	    <a href="#join" class="cta-button bg-purple-500 text-white py-3 px-6 rounded-lg hover:bg-purple-700 mx-4 my-2 inline-block">Join the Movement</a>
-  </div>
-
+      <a href="/scan" class="cta-button bg-blue-500 text-white py-2 px-4 sm:py-3 sm:px-6 rounded-lg hover:bg-blue-700 mx-2 my-2 inline-block">Try Our Scanning Tool</a>
+      <a href="#vision-section" class="cta-button bg-green-500 text-white py-2 px-4 sm:py-3 sm:px-6 rounded-lg hover:bg-green-700 mx-2 my-2 inline-block">Read the White Paper</a>
+      <a href="#join" class="cta-button bg-purple-500 text-white py-2 px-4 sm:py-3 sm:px-6 rounded-lg hover:bg-purple-700 mx-2 my-2 inline-block">Join the Movement</a>
+    </div>
   </div>
 </section>
 
-<!-- Call-to-Action Buttons -->
-
 <!-- Call-to-Action Rant Section -->
 <section class="cta-rant-section py-12">
-  <div class="container mx-auto flex flex-col lg:flex-row items-center justify-between">
-    <div class="cta-text lg:w-1/2 px-4">
-      <h2 class="text-3xl font-semibold mb-4">Why Now?</h2>
-      <p class="text-lg mb-4">In an era marked by rising tariffs, global supply chain instability, and increasing economic isolation, communities are being pushed to adapt in real time...</p>
-      <h3 class="highlighted-subhead text-xl font-bold text-blue-600 mb-4">Shopidarity exists to counter this uncertainty.</h3>
-      <p class="mb-4">By building a cooperative product library rooted in shared knowledge and mutual aid, we're empowering people to find and share what they need locally...</p>
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center justify-between space-y-6 lg:space-y-0">
+    <div class="cta-text lg:w-1/2">
+      <h2 class="text-2xl sm:text-3xl font-semibold mb-4">Why Now?</h2>
+      <p class="text-base sm:text-lg mb-4">In an era marked by rising tariffs, global supply chain instability, and increasing economic isolation, communities are being pushed to adapt in real time...</p>
+      <h3 class="highlighted-subhead text-lg sm:text-xl font-bold text-blue-600 mb-4">Shopidarity exists to counter this uncertainty.</h3>
+      <p class="mb-4 text-base sm:text-lg">By building a cooperative product library rooted in shared knowledge and mutual aid, we're empowering people to find and share what they need locally...</p>
     </div>
-    <div class="cta-image lg:w-1/2 px-4">
-      <img src="{{ url_for('static', filename='images/global-supply-chain.jpg') }}" alt="Shipping containers and disrupted supply chain" class="rounded-lg shadow-lg">
+    <div class="cta-image lg:w-1/2">
+      <img src="{{ url_for('static', filename='images/global-supply-chain.jpg') }}" alt="Shipping containers and disrupted supply chain" class="rounded-lg shadow-lg w-full">
     </div>
   </div>
 </section>
 
 <!-- Vision Section -->
 <section id="vision-section" class="section py-12 bg-gray-100 vision-background">
-  <div class="container mx-auto text-center">
-    <h2 class="text-3xl font-semibold mb-6">Our Vision</h2>
-    <p class="text-lg mb-6">We believe consumer choice can become collective power. Shopidarity is building tools to help people coordinate around the products they buy...</p>
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <h2 class="text-2xl sm:text-3xl font-semibold mb-6">Our Vision</h2>
+    <p class="text-base sm:text-lg mb-6">We believe consumer choice can become collective power. Shopidarity is building tools to help people coordinate around the products they buy...</p>
     <a href="{{ url_for('static', filename='whitepaper.pdf') }}" target="_blank" class="vision-button bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700">📄 Download the White Paper (PDF)</a>
   </div>
 </section>
 
 <!-- How It Works Section -->
 <section class="how-it-works py-12">
-  <div class="container mx-auto flex flex-col lg:flex-row items-center justify-between">
-    <div class="text-content lg:w-1/2 px-4 mb-8 lg:mb-0">
-      <h2 class="text-3xl font-semibold mb-6">How It Works</h2>
-      <ul class="list-disc pl-6 text-lg">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center justify-between space-y-6 lg:space-y-0">
+    <div class="text-content lg:w-1/2">
+      <h2 class="text-2xl sm:text-3xl font-semibold mb-6">How It Works</h2>
+      <ul class="list-disc pl-6 text-base sm:text-lg">
         <li><strong>Scan and Discover:</strong> Just scan a product's barcode to instantly access community insights, sourcing details, and ethical background...</li>
         <li><strong>Connect and Organize:</strong> Join forces with others who care about what they buy. Build groups based on shared values...</li>
         <li><strong>Act and Influence:</strong> Collective action becomes simple, practical, and powerful.</li>
       </ul>
     </div>
-    <div class="image-content lg:w-1/2 px-4">
+    <div class="image-content lg:w-1/2">
       <img src="{{ url_for('static', filename='images/scan-connect.jpg') }}" alt="Scanning a barcode in a store" class="rounded-lg shadow-lg w-full">
     </div>
   </div>
@@ -62,17 +59,21 @@
 
 <!-- Join Mailing List Section -->
 <section class="section py-12 bg-gray-200" id="join">
-  <div class="container mx-auto text-center">
-    <h2 class="text-3xl font-semibold mb-4">Join Our Mailing List</h2>
-    <p class="text-lg mb-6">Be the first to try new features, add new products to our lilbrary, and help shape the future of ethical consumer organizing.</p>
-    <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSe3NYxM44s40Mr98wu1bH1nIw7nciIi_n_zpp_8WfEZREEBJw/viewform?embedded=true" width="640" height="1073" frameborder="0" marginheight="0" marginwidth="0" class="w-full"></iframe>
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <h2 class="text-2xl sm:text-3xl font-semibold mb-4">Join Our Mailing List</h2>
+    <p class="text-base sm:text-lg mb-6">Be the first to try new features, add new products to our library, and help shape the future of ethical consumer organizing.</p>
+    <div class="w-full max-w-full sm:w-[640px] mx-auto">
+      <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSe3NYxM44s40Mr98wu1bH1nIw7nciIi_n_zpp_8WfEZREEBJw/viewform?embedded=true"
+              width="100%" height="1073" frameborder="0" marginheight="0" marginwidth="0"
+              class="w-full rounded-lg shadow-md"></iframe>
+    </div>
   </div>
 </section>
 
 <!-- Footer -->
 <footer class="bg-gray-800 text-white py-6">
-  <div class="container mx-auto text-center">
-    <p>&copy; {{current_year}} Shopidarity. All Rights Reserved.</p>
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <p class="text-sm sm:text-base">&copy; {{current_year}} Shopidarity. All Rights Reserved.</p>
   </div>
 </footer>
 
