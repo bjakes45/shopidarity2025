@@ -76,11 +76,14 @@ def seed_products():
             upc = row['upc'].strip()
             name = row['name'].strip()
 
+            print(upc, name)
+
             # Avoid duplicates
-            if Product.query.filter_by(upc=upc).first() is None:
-                product = Product(upc=upc, name=name, status="APPROVED")
-                db.session.add(product)
-                count += 1
+            if len(upc) == 12:
+               if Product.query.filter_by(upc=upc).first() is None:
+                   product = Product(upc=upc, name=name, status="APPROVED")
+                   db.session.add(product)
+                   count += 1
 
             if count >= 50000:
                 break
@@ -135,6 +138,22 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'  # name of your login route
 
+
+@app.before_request
+def initialize_database():
+    db.create_all()
+
+    if Product.query.count() == 0:
+        seed_products()    
+
+    # Ensure PLU seed only happens once
+    plu_count = Product.query.filter(db.func.length(Product.upc) == 4).count()
+    if plu_count == 0:
+        seed_plus()
+    else:
+        print(plu_count)
+
+
 # User loader
 @login_manager.user_loader
 def load_user(user_id):
@@ -153,7 +172,10 @@ def scan():
 #PRODUCTS
 @app.route('/products', methods=['GET'])
 def products():
-    products_all = Product.query.all()
+    #products_all = Product.query.all()
+    # Query all products where UPC is exactly 4 characters long
+    products_all = Product.query.filter(db.func.length(Product.upc) == 4).all()
+
 
     query = request.args.get('query', '')  # Retrieve UPC query if available
 
@@ -552,13 +574,4 @@ def unfavorite(upc):
 
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        if Product.query.count() == 0:
-	        seed_products()
-
-        plu_count = Product.query.filter(db.func.length(Product.upc) == 4).count()
-        if plu_count == 0:
-            seed_plus()
-
     app.run(debug=True)
