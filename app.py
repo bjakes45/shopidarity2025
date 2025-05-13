@@ -67,6 +67,26 @@ def get_working_image_url(image_urls):
             continue
     return None  # Return None if no valid URL found
 
+def get_user_favorites(user_id):
+    return Product.query.join(Favorite).filter(Favorite.user_id == user_id).all()
+
+def get_user_ratings(user_id):
+    return Rating.query.filter_by(user_id=user_id).all()
+
+def find_similar_users(user_id):
+    # Placeholder: Find users who favorited/rated the same items
+    return User.query.filter(User.id != user_id).limit(5).all()
+
+def recommend_products(favorites, ratings):
+    # Placeholder: Recommend products in same categories as favorites/ratings
+    categories = {p.category for p in favorites}
+    return Product.query.filter(Product.category.in_(categories)).limit(10).all()
+
+def get_nearby_deals(location, products):
+    # Placeholder: sort by distance from location
+    return Deal.query.filter(Deal.product_id.in_([p.id for p in products])).limit(5).all()
+
+
 #create Items in Database from upc_corpus.csv on server init
 def seed_products():
     with open('static/upc_corpus.csv', newline='', encoding='utf-8') as csvfile:
@@ -393,6 +413,24 @@ def reject_suggestion(product_upc):
     db.session.commit()
     flash(f"Product '{product.name}' rejected and deleted.", "info")
     return redirect(url_for("dashboard_suggestions"))
+
+#DISCOVERY
+@app.route('/discover')
+@login_required
+def discover():
+    user = current_user
+    user_favorites = get_user_favorites(user.id)
+    user_ratings = get_user_ratings(user.id)
+
+    similar_users = find_similar_users(user.id)
+    recommended_products = recommend_products(user_favorites, user_ratings)
+    nearby_deals = get_nearby_deals(user.location, recommended_products)
+
+    return render_template('discover.html',
+                           similar_users=similar_users,
+                           recommended_products=recommended_products,
+                           nearby_deals=nearby_deals)
+
 
 #CHECK UPC
 @app.route('/api/check_upc/<upc>')
