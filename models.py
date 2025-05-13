@@ -23,7 +23,7 @@ class ProductStatus(Enum):
 
 class Product(db.Model):
     upc = db.Column(db.String(20), unique=True, nullable=False, primary_key=True)
-    name = db.Column(db.String(256), nullable=True)
+    name = db.Column(db.String(512), nullable=True)
     category = db.Column(db.String(128), nullable=True)
     brand = db.Column(db.String(128), nullable=True)
     description = db.Column(db.Text, nullable=True)
