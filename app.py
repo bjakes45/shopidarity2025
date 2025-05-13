@@ -88,6 +88,29 @@ def seed_products():
         db.session.commit()
         print(f"{count} products seeded.")
 
+def seed_plus():
+    with open('static/price_lookup_codes.csv', newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
+        count = 0
+        for row in reader:
+            upc = row['plu'].strip()
+            name = row['variety'].strip() +" "+ row['commodity'].strip()
+            category = row['category'].strip()
+            image_url = row['image_url'].strip()
+            
+            # Debug: Output data for every row processed
+
+            # Avoid duplicates
+            if Product.query.filter_by(upc=upc).first() is None:
+                product = Product(upc=upc, name=name, category=category, image_url=image_url, status="APPROVED")
+                db.session.add(product)
+                count += 1
+
+            if count >= 2000:
+                break
+
+        db.session.commit()
+        print(f"{count} products seeded.")
 
 #Init server and database connection
 app = Flask(__name__)
@@ -210,7 +233,8 @@ def new_product():
     if not is_rate_limited(ip_address):
         increment_ip_count(ip_address)
         flash(f"IP Limit: {len(ip_timestamps(ip_address))} / 5 per day")
-
+    
+    is_logged_in = current_user.is_authenticated
 
     upc = request.args.get('upc', '')  # Retrieve UPC query
     if not upc or len(upc) not in (12, 13):
@@ -236,6 +260,8 @@ def new_product():
             offers = json.loads(offers_raw) if offers_raw else None
         except json.JSONDecodeError:
             offers = None  # fallback if invalid
+        status = ProductStatus.APPROVED if is_logged_in else ProductStatus.SUGGESTED
+        user_id = current_user.id if is_logged_in else None
 
         new_product = Product(
             upc=upc,
@@ -243,7 +269,10 @@ def new_product():
             category=category,
             brand=brand,
             image_url=image_url,
-            nutriments=nutriments
+            nutriments=nutriments,
+            status=status,
+            suggested_by_ip=ip_address,
+            user_id=user_id
         )
         db.session.add(new_product)
         db.session.flush()
@@ -279,6 +308,13 @@ def dashboard():
     
     return render_template('dashboard/dashboard.html', favorites=favorites, ratings=ratings, comments=comments)
 
+@app.route('/dashboard/added_products')
+@login_required
+def dashboard_added_products():
+    added_products = Product.query.filter_by(user_id=current_user.id).all()
+    
+    return render_template('dashboard/added_products.html', added_products=added_products)
+
 @app.route('/dashboard/favorites')
 @login_required
 def dashboard_favorites():
@@ -310,8 +346,10 @@ def dashboard_suggestions():
 @app.route("/suggestion/approve/<product_upc>", methods=["POST"])
 @login_required
 def approve_suggestion(product_upc):
+    user_id = current_user.id
     product = Product.query.get_or_404(product_upc)
     product.status = ProductStatus.APPROVED
+    product.user_id = user_id
     db.session.commit()
     flash(f"Product '{product.name}' approved.", "success")
     return redirect(url_for("dashboard_suggestions"))
@@ -509,4 +547,9 @@ if __name__ == '__main__':
         db.create_all()
         if Product.query.count() == 0:
 	        seed_products()
+
+        plu_count = Product.query.filter(db.func.length(Product.upc) == 4).count() == 0
+        if plu_count == 0:
+            seed_plus()
+
     app.run(debug=True)

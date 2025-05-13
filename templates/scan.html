@@ -8,32 +8,32 @@
       <div class="col-md-6" id="scanner-container">
         <h1>Scan a Product Barcode</h1>
         <p>Hold the barcode still in the center of the frame.</p>
-        <p>This prototype may be prone to error if you move the barcode, please scan again if it gets it wrong.</p>
-        <div id="scanner"></div>
+        <p>This prototype may be prone to error if you move the barcode. Please scan again if it gets it wrong. You can also type the UPC code below.</p>
+
+        <div id="scanner" style="position: relative; width: 100%; height: 300px;"></div>
+
+        <!-- Waiting for scan text and Scan Again button -->
+        <div id="result" class="mt-4">Waiting for scan...</div>
+        <a href="" id="scan-again" class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 mx-4 my-2 inline-block">Scan Again</a>
 
         <!-- Editable UPC Field + Refresh Button -->
-        <div id="detected-upc" class="mt-4 hidden">
-          <label for="upc-input" class="block text-sm font-medium text-gray-700">Detected UPC:</label>
+        <div id="detected-upc" class="mt-4">
+          <label for="upc-input" class="block text-sm font-medium text-gray-700">Enter UPC Code:</label>
           <div class="flex items-center space-x-2">
             <input type="text" id="upc-input" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
             <button id="refresh-code" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Refresh Code</button>
           </div>
         </div>
-        <div id="result">Waiting for scan...</div>
-        <a href="" id="scan-again" class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 mx-4 my-2 inline-block">Scan Again</a>
       </div>
 
       <!-- Right column: Search Links & Add Product Prompt -->
       <div class="col-md-6" id="product-info">
         <div id="search-links" style="display: none;">
           <h3>Product Information</h3>
-          <div id="product-detail-link" style="display: none;">
-          
-          </div>
-          <p id="add-product-prompt" style="display: none;">
-            </p>
-          <p id="add-product-verify" style="display: none;">Before adding this product to Shopidarity, we recommend checking external sources to verify the product details:</p>
-          <p>Search:<p>
+          <div id="product-detail-link" style="display: none;"></div>
+          <p id="add-product-prompt" style="display: none;"></p>
+          <p id="add-product-verify" style="display: none;">Before adding this product to Shopidarity, we recommend checking external sources to verify the product details. NOTE: Users will only be able to add 5 products per day initially.</p>
+          <h2>Search:</h2>
           <a href="#" id="google-link" target="_blank" class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 mx-4 my-2 inline-block">Google</a>
           <a href="#" id="amazon-link" target="_blank" class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 mx-4 my-2 inline-block">Amazon</a>
           <a href="#" id="openfoodfacts-link" target="_blank" class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 mx-4 my-2 inline-block">World Food Facts</a>
@@ -47,71 +47,68 @@
   <script>
     let lastDetectedCode = null;
     const upcInput = document.getElementById('upc-input');
-    const detectedUpcSection = document.getElementById('detected-upc');
-    const refreshBtn = document.getElementById('refresh-code');
     const resultEl = document.getElementById('result');
     const scanAgainBtn = document.getElementById('scan-again');
     const searchLinksEl = document.getElementById('search-links');
     const googleLink = document.getElementById('google-link');
     const amazonLink = document.getElementById('amazon-link');
     const openfoodfactsLink = document.getElementById('openfoodfacts-link');
-
     const productDetailEl = document.getElementById('product-detail-link');
     const addProductPrompt = document.getElementById('add-product-prompt');
     const addProductVerify = document.getElementById('add-product-verify');
-    const addProductLink = document.getElementById('add-product-link');
+    const refreshBtn = document.getElementById('refresh-code');
 
+    // UPC validation regex
+    const validateUPC = code => /^(?:\d{4}|9\d{4}|\d{12,13})$/.test(code);
 
     function handleUPCSearch(code) {
-        // Validate UPC length (only 12 or 13 digits allowed)
-      if (!/^\d{12,13}$/.test(code)) {
-        resultEl.innerHTML = `<span class="text-red-600">Invalid UPC detected. Please rescan the barcode.</span>`;
+      if (!validateUPC(code)) {
+        resultEl.innerHTML = `<span class="text-red-600">Invalid code detected. Please scan a valid barcode or enter a UPC/PLU.</span>`;
         searchLinksEl.style.display = "none";
+        productDetailEl.style.display = "none";
         addProductPrompt.style.display = "none";
         addProductVerify.style.display = "none";
-        productDetailEl.style.display = "none";
         return;
       }
-      
+
       fetch(`/api/check_upc/${code}`)
         .then(response => response.json())
         .then(data => {
           if (data.exists) {
             const product = data.product;
-            resultEl.innerHTML = `Detected UPC: ${code}`;
+            resultEl.innerHTML = `Detected ${code.length === 4 || code.length === 5 ? 'PLU' : 'UPC'}: ${code}`;
             searchLinksEl.style.display = "block";
-            googleLink.href = `https://www.google.com/search?q=${code}`;
-            amazonLink.href = `https://www.amazon.com/s?k=${code}`;
-            openfoodfactsLink.href = `https://world.openfoodfacts.org/product/${code}`;
             productDetailEl.style.display = "block";
-            productDetailEl.innerHTML = 
-              `<ul class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            productDetailEl.innerHTML = `
+              <ul class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 <li class="p-4 border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition bg-white">
                   <h3 class="text-md font-semibold text-gray-800 truncate">
-                    <a href="products/${code}" class="block text-lg font-semibold text-blue-600 hover:underline">${ product.name }</a>
+                    <a href="products/${code}" class="block text-lg font-semibold text-blue-600 hover:underline">${product.name}</a>
                   </h3>
-                  <p class="text-sm text-gray-600">UPC: ${ product.upc }</p>
+                  <p class="text-sm text-gray-600">${code.length === 4 || code.length === 5 ? 'PLU' : 'UPC'} ${product.upc}</p>
                   <div class="flex justify-between text-sm text-gray-700 mt-2">
-                    <span>Brand: ${ product.brand }</span>
+                    <span>Brand: ${product.brand}</span>
                   </div>
                 </li>
               </ul>`;
             addProductPrompt.style.display = "none";
             addProductVerify.style.display = "none";
           } else {
-            resultEl.innerHTML = `Detected UPC: ${code}`;
+            resultEl.innerHTML = `Detected ${code.length === 4 || code.length === 5 ? 'PLU' : 'UPC'}: ${code}`;
             searchLinksEl.style.display = "block";
-            googleLink.href = `https://www.google.com/search?q=${code}`;
-            amazonLink.href = `https://www.amazon.com/s?k=${code}`;
-            openfoodfactsLink.href = `https://world.openfoodfacts.org/product/${code}`;
+            googleLink.href = `https://www.google.com/search?q=${code.length === 4 || code.length === 5 ? 'PLU' : 'UPC'}:${code}`;
+            amazonLink.href = `https://www.amazon.com/s?k=${code.length === 4 || code.length === 5 ? 'PLU' : 'UPC'}:${code}`;
+            openfoodfactsLink.href = `${code.length === 4 || code.length === 5 ? '' : 'https://world.openfoodfacts.org/product/' + code}`;
+            openfoodfactsLink.style.display = `${code.length === 4 || code.length === 5 ? 'none' : 'block'}`;
+            productDetailEl.style.display = "block";
             addProductPrompt.style.display = "block";
-            addProductPrompt.innerHTML = 
-            `<em>Product with UPC:${code} is not yet in the Shopidarity library.</em><br>
-            <a href="/products/new?upc=${code}"  class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 mx-4 my-2 inline-block">Add this product</a>`;
+            addProductPrompt.innerHTML = `<em>Product with ${code.length === 4 || code.length === 5 ? 'PLU' : 'UPC'}${code} is not yet in the Shopidarity library.</em><br>
+              <a href="/products/new?upc=${code}" class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 mx-4 my-2 inline-block">Add this product</a>`;
+            addProductVerify.style.display = "block";
           }
         });
     }
-    
+
     function startScanner() {
       resultEl.textContent = "Waiting for scan...";
       scanAgainBtn.style.display = "none";
@@ -123,29 +120,19 @@
           target: document.querySelector('#scanner'),
           constraints: {
             facingMode: "environment",
-            width: 640, // Define the resolution for better detection
+            width: 640,
             height: 480,
           },
-          area: { // Optional: set up the area to focus on for better precision
-            top: "10%",
-            right: "10%",
-            left: "10%",
-            bottom: "10%"
-          },
+          area: { top: "10%", right: "10%", left: "10%", bottom: "10%" },
         },
         decoder: {
           readers: ["upc_reader", "upc_e_reader"],
-          multiple: false,  // Limit to one detection at a time
-          debug: {
-            drawBoundingBox: false, // Disable bounding box rendering for better performance
-            showFrequency: false,
-            drawScanline: true, // Draw scanline
-            showPattern: false
-          }
+          multiple: false,
+          debug: { drawBoundingBox: false, showFrequency: false, drawScanline: true, showPattern: false }
         },
         locator: {
-          patchSize: "medium", // Adjust locator size to improve barcode identification
-          halfSample: true // Enable to decrease image size for faster processing
+          patchSize: "medium",
+          halfSample: true
         }
       }, function(err) {
         if (err) {
@@ -155,27 +142,21 @@
         }
         Quagga.start();
       });
-
     }
 
     Quagga.onDetected(data => {
       const code = data.codeResult.code;
       lastDetectedCode = code;
       upcInput.value = code;
-      detectedUpcSection.classList.remove("hidden");
-
       handleUPCSearch(code);
-      // Stop scanner shortly after detection
       setTimeout(() => {
         Quagga.stop();
-        document.querySelector('#scanner').innerHTML = ''; // Clear video
+        document.querySelector('#scanner').innerHTML = '';
         scanAgainBtn.style.display = "inline-block";
       }, 500);
     });
 
-    scanAgainBtn.addEventListener('click', () => {
-      startScanner();
-    });
+    scanAgainBtn.addEventListener('click', startScanner);
 
     refreshBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -185,7 +166,6 @@
       }
     });
 
-    // Start scanner on load
     startScanner();
   </script>
 {% endblock %}

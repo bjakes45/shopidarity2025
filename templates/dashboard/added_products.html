@@ -1,0 +1,18 @@
+{% extends "dashboard/base.html" %}
+{% block dashboard %}
+	<!-- added_products -->
+	<section id="added_products">
+	  <h3 class="text-2xl font-bold mb-4">My Added Products</h3>
+	  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+	    {% for fav in added_products %}
+	      <div class="bg-white p-4 rounded-xl shadow hover:shadow-md">
+	        <a href="{{ url_for('product_detail', upc=fav.upc) }}" class="text-lg font-semibold text-blue-700 hover:underline">
+	          {{ fav.name }}
+	        </a>
+	      </div>
+	    {% else %}
+	      <p>No added_products yet.</p>
+	    {% endfor %}
+	  </div>
+	</section>
+{% endblock %}

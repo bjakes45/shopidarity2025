@@ -52,6 +52,8 @@ body {
   top: 30px; /* Adjust to avoid overlap with navbar */
 }
 
+
+
 /* Video Styling */
 video {
   width: 100%;
@@ -64,6 +66,31 @@ video {
   max-width: 600px;
   margin: auto;
   text-align: center;
+}
+
+#scanner-container {
+  position: relative;
+}
+
+#scanner {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  height: 300px; /* Fixed height */
+  overflow: hidden;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+#scanner video,
+#scanner canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
 }
 
 #scan-again {

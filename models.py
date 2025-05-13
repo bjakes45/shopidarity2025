@@ -8,10 +8,6 @@ from sqlalchemy import Enum as SQLEnum
 db = SQLAlchemy()
 
 
-class ProductStatus(Enum):
-    SUGGESTED = "suggested"
-    APPROVED = "approved"
-    REJECTED = "rejected"
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -20,6 +16,10 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(200), nullable=False)
     city = db.Column(db.String(100))
 
+class ProductStatus(Enum):
+    SUGGESTED = "suggested"
+    APPROVED = "approved"
+    REJECTED = "rejected"
 
 class Product(db.Model):
     upc = db.Column(db.String(20), unique=True, nullable=False, primary_key=True)
@@ -32,10 +32,15 @@ class Product(db.Model):
 
     status = db.Column(SQLEnum(ProductStatus), default=ProductStatus.SUGGESTED, nullable=False)
 
+    # NEW FIELDS
+    suggested_by_ip = db.Column(db.String(64), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user = db.relationship("User", backref="products")
+
     deals = db.relationship('Deal', back_populates='product', cascade='all, delete-orphan')
 
     def __repr__(self):
-        return f'<Product {self.upc} - {self.title}>'
+        return f'<Product {self.upc} - {self.name}>'
 
 class Favorite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
