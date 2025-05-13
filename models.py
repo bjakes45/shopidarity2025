@@ -72,8 +72,7 @@ class Comment(db.Model):
 
 class Deal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.upc'), nullable=False)
-    
+    product_id = db.Column(db.String, db.ForeignKey('product.upc'), nullable=False)    
     price = db.Column(db.Float, nullable=False)
     store = db.Column(db.String(120), nullable=False)
     url = db.Column(db.String(300))
