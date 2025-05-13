@@ -76,7 +76,6 @@ def seed_products():
             upc = row['upc'].strip()
             name = row['name'].strip()
 
-            print(upc, name)
 
             # Avoid duplicates
             if len(upc) == 12:
