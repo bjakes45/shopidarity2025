@@ -122,11 +122,30 @@
           type: "LiveStream",
           target: document.querySelector('#scanner'),
           constraints: {
-            facingMode: "environment"
-          }
+            facingMode: "environment",
+            width: 640, // Define the resolution for better detection
+            height: 480,
+          },
+          area: { // Optional: set up the area to focus on for better precision
+            top: "10%",
+            right: "10%",
+            left: "10%",
+            bottom: "10%"
+          },
         },
         decoder: {
-          readers: ["upc_reader", "upc_e_reader"]
+          readers: ["upc_reader", "upc_e_reader"],
+          multiple: false,  // Limit to one detection at a time
+          debug: {
+            drawBoundingBox: false, // Disable bounding box rendering for better performance
+            showFrequency: false,
+            drawScanline: true, // Draw scanline
+            showPattern: false
+          }
+        },
+        locator: {
+          patchSize: "medium", // Adjust locator size to improve barcode identification
+          halfSample: true // Enable to decrease image size for faster processing
         }
       }, function(err) {
         if (err) {
@@ -136,6 +155,7 @@
         }
         Quagga.start();
       });
+
     }
 
     Quagga.onDetected(data => {
