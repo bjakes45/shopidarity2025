@@ -107,7 +107,7 @@ def seed_products():
                    db.session.add(product)
                    count += 1
 
-            if count >= 1000:
+            if count >= 500:
                 break
 
         db.session.commit()
