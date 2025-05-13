@@ -75,7 +75,10 @@ def get_user_ratings(user_id):
 
 def find_similar_users(user_id):
     # Placeholder: Find users who favorited/rated the same items
-    return User.query.filter(User.id != user_id).limit(5).all()
+    similar_users = User.query.filter(User.id != user_id).all()
+    similar_users.sort(key=lambda u: u.shared_interest_score(current_user), reverse=True)
+    top_5_similar_users = similar_users[:5]
+    return top_5_similar_users
 
 def recommend_products(favorites, ratings):
     # Placeholder: Recommend products in same categories as favorites/ratings
@@ -104,7 +107,7 @@ def seed_products():
                    db.session.add(product)
                    count += 1
 
-            if count >= 500:
+            if count >= 1000:
                 break
 
         db.session.commit()
@@ -193,8 +196,7 @@ def scan():
 def products():
     #products_all = Product.query.all()
     # Query all products where UPC is exactly 4 characters long
-    products_all = Product.query.filter(db.func.length(Product.upc) == 4).all()
-
+    products_all = Product.query.all()
 
     query = request.args.get('query', '')  # Retrieve UPC query if available
 
@@ -424,7 +426,7 @@ def discover():
 
     similar_users = find_similar_users(user.id)
     recommended_products = recommend_products(user_favorites, user_ratings)
-    nearby_deals = get_nearby_deals(user.location, recommended_products)
+    nearby_deals = get_nearby_deals(user.city, recommended_products)
 
     return render_template('discover.html',
                            similar_users=similar_users,
