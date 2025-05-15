@@ -274,9 +274,27 @@ def new_product():
     
     if request.method == 'POST':
         name = request.form['name']
-        category = request.form['category']
         brand = request.form['brand']
         image_url = request.form['image_url']
+        
+        category = request.form['category']
+        
+        def trim_category_string(category_str, max_items=3):
+            if not category_str:
+                return ''
+            parts = [p.strip() for p in category_str.split(',') if p.strip()]
+            
+            if len(parts) <= max_items:
+                return ', '.join(parts)
+            # Pick first (general) and last two (specific)
+            trimmed = [parts[0]] + parts[-(max_items - 1):]
+            return ', '.join(trimmed)
+        
+    if len(category) > 128:
+        category = trim_category_string(category)
+        if len(category) > 128:
+            category = category[:125] + '...'
+        
         nutriments_raw = request.form.get('nutriments')
         nutriments = None
 
