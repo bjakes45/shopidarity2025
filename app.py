@@ -130,7 +130,7 @@ def products():
             Product.description.ilike(f"%{query}%"),
             Product.category.ilike(f"%{query}%")
         )
-).filter_by(status=ProductStatus.APPROVED)
+        ).filter_by(status=ProductStatus.APPROVED).all()
     
     pagination, page, total_pages, total = get_paginated(products, page, per_page=18)
     def url_builder(p):
