@@ -5,18 +5,43 @@
 
 <div class="flex">
   <!-- Sidebar -->
-  <aside class="w-64 bg-gray-100 min-h-screen p-4">
-    <h2 class="text-xl font-semibold mb-6"><a href="{{ url_for('product_detail', upc=product.upc) }}"> UPC:{{ product.upc}} </a></h2>
-    <nav class="space-y-2">
-      <a href= "{{ url_for('product_comments', upc=product.upc) }}" class="block text-blue-600 hover:underline">All Comments</a>
-      {% if product.nutriments %}
-        <a href="{{ url_for('product_nutrifacts', upc=product.upc) }}" class="block text-blue-600 hover:underline">Nutrifacts</a>
-      {% endif %}
-      {% if product.deals %}
-        <a href="{{ url_for('product_deals', upc=product.upc) }}" class="block text-blue-600 hover:underline">Deals</a>
-      {% endif %}
-    </nav>
-  </aside>
+<aside class="w-64 bg-gray-100 min-h-screen p-6">
+  <h2 class="text-xl font-semibold mb-6 text-gray-800">
+    <a href="{{ url_for('product_detail', upc=product.upc) }}" class="text-blue-600 hover:underline">UPC: {{ product.upc }}</a>
+  </h2>
+
+  <nav class="space-y-4">
+    <!-- All Comments Link -->
+    <a href="{{ url_for('product_comments', upc=product.upc) }}"
+       class="block text-gray-700 font-medium hover:text-blue-600 transition duration-200 hover:underline">
+      All Comments
+    </a>
+
+    <!-- Nutrifacts Link -->
+    {% if product.nutriments %}
+      <a href="{{ url_for('product_nutrifacts', upc=product.upc) }}"
+         class="block text-gray-700 font-medium hover:text-blue-600 transition duration-200 hover:underline">
+        Nutrifacts
+      </a>
+    {% endif %}
+
+    <!-- Deals Link -->
+    {% if product.deals %}
+      <a href="{{ url_for('product_deals', upc=product.upc) }}"
+         class="block text-gray-700 font-medium hover:text-blue-600 transition duration-200 hover:underline">
+        Deals
+      </a>
+    {% endif %}
+
+    <!-- Add New Deal Button -->
+    <a href="{{ url_for('product_new_deal', upc=product.upc) }}"
+       class="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-200 w-full justify-center">
+      <span class="text-xl leading-none">+</span>
+      Add New Deal
+    </a>
+  </nav>
+</aside>
+
 
 <main class="flex-1 p-6 space-y-10">
   {% block detail %}{% endblock %}

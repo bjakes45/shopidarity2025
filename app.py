@@ -4,17 +4,40 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from models import db, User, Product, Rating, Favorite, Comment, ProductStatus, Deal
 from functools import wraps
 from datetime import datetime, timedelta
+import geopy, json, os, random, csv, requests
+import re
 import pandas as pd
-import csv, requests
 from datetime import datetime
 from sqlalchemy import func, or_
-import geopy
 from geopy.geocoders import Nominatim
-import json
 from dotenv import load_dotenv
-import os
+from faker import Faker
+from flask_wtf import CSRFProtect
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse
+import requests.exceptions
 
 
+from helpers import (
+    is_rate_limited,
+    increment_ip_count,
+    login_required_with_redirect_back,
+    get_user_favorites,
+    get_user_ratings,
+    find_similar_users,
+    recommend_products,
+    get_potential_groups,
+    get_working_image_url,
+    seed_products,
+    seed_plus,
+    seed_users_with_interactions,
+    seed_deals,
+    submissions_by_ip,
+    ip_timestamps,
+    get_paginated
+)
+
+faker = Faker()
 load_dotenv()
 
 #APP CONTEXT
@@ -25,121 +48,10 @@ API_USAGE = {
     "reset_timestamp": None  # from UPCDB header
 }
 
-submissions_by_ip = {}
-
-def is_rate_limited(ip):
-    timestamps = ip_timestamps(ip)
-
-    if len(timestamps) >= 5:
-        return True
-    # Not updating timestamps yet — only after success
-    submissions_by_ip[ip] = timestamps
-    return False
-
-def increment_ip_count(ip):
-    now = datetime.utcnow()
-    submissions_by_ip.setdefault(ip, []).append(now)
-
-def ip_timestamps(ip):
-	now = datetime.utcnow()
-	window_start = now - timedelta(days=1)
-	timestamps = submissions_by_ip.get(ip, [])
-	timestamps = [ts for ts in timestamps if ts > window_start]
-
-	return timestamps
-
-def login_required_with_redirect_back(func):
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash("Please sign in to access this feature.", "error")
-            return redirect(request.referrer or "/")
-        return func(*args, **kwargs)
-    return decorated_view
-
-def get_working_image_url(image_urls):
-    for url in image_urls:
-        try:
-            response = requests.head(url, timeout=5)
-            if response.status_code == 200:
-                return url
-        except requests.RequestException:
-            continue
-    return None  # Return None if no valid URL found
-
-def get_user_favorites(user_id):
-    return Product.query.join(Favorite).filter(Favorite.user_id == user_id).all()
-
-def get_user_ratings(user_id):
-    return Rating.query.filter_by(user_id=user_id).all()
-
-def find_similar_users(user_id):
-    # Placeholder: Find users who favorited/rated the same items
-    similar_users = User.query.filter(User.id != user_id).all()
-    similar_users.sort(key=lambda u: u.shared_interest_score(current_user), reverse=True)
-    top_5_similar_users = similar_users[:5]
-    return top_5_similar_users
-
-def recommend_products(favorites, ratings):
-    # Placeholder: Recommend products in same categories as favorites/ratings
-    categories = {p.category for p in favorites}
-    return Product.query.filter(Product.category.in_(categories)).limit(10).all()
-
-def get_nearby_deals(location, products):
-    # Placeholder: sort by distance from location
-    return Deal.query.filter(Deal.product_id.in_([p.id for p in products])).limit(5).all()
-
-
-#create Items in Database from upc_corpus.csv on server init
-def seed_products():
-    with open('static/upc_corpus.csv', newline='', encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
-        count = 0
-        for row in reader:
-            upc = row['upc'].strip()
-            name = row['name'].strip()
-
-
-            # Avoid duplicates
-            if len(upc) == 12:
-               if Product.query.filter_by(upc=upc).first() is None:
-                   product = Product(upc=upc, name=name, status="APPROVED")
-                   db.session.add(product)
-                   count += 1
-
-            if count >= 500:
-                break
-
-        db.session.commit()
-        print(f"{count} products seeded.")
-
-def seed_plus():
-    with open('static/price_lookup_codes.csv', newline='', encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
-        count = 0
-        for row in reader:
-            upc = row['plu'].strip()
-            name = row['variety'].strip() +" "+ row['commodity'].strip()
-            category = row['category'].strip()
-            image_url = row['image_url'].strip()
-            
-            # Debug: Output data for every row processed
-
-            # Avoid duplicates
-            if Product.query.filter_by(upc=upc).first() is None:
-                product = Product(upc=upc, name=name, category=category, image_url=image_url, status="APPROVED")
-                db.session.add(product)
-                count += 1
-
-            if count >= 2000:
-                break
-
-        db.session.commit()
-        print(f"{count} products seeded.")
-
 #Init server and database connection
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
+csrf = CSRFProtect(app)
 if os.environ.get('RENDER'):
     # Running on Render – require DATABASE_URL
     database_url = os.environ.get('DATABASE_URL')
@@ -172,8 +84,12 @@ def initialize_database():
     plu_count = Product.query.filter(db.func.length(Product.upc) == 4).count()
     if plu_count == 0:
         seed_plus()
-    else:
-        print(plu_count)
+  
+    if User.query.count() <= 1:
+      seed_users_with_interactions()
+
+    if Deal.query.count() <= 100:
+      seed_deals()
 
 
 # User loader
@@ -197,13 +113,14 @@ def products():
     #products_all = Product.query.all()
     # Query all products where UPC is exactly 4 characters long
     products_all = Product.query.all()
+    db_total = len(products_all)
 
     query = request.args.get('query', '')  # Retrieve UPC query if available
 
     page = request.args.get('page', 1, type=int)
     per_page = 12
 
-    products = Product.query.filter_by(status=ProductStatus.APPROVED)
+    products = Product.query.filter_by(status=ProductStatus.APPROVED).all()
     
     if query:
         products = Product.query.filter(
@@ -215,9 +132,19 @@ def products():
         )
 ).filter_by(status=ProductStatus.APPROVED)
     
-    pagination = products.paginate(page=page, per_page=per_page)
+    pagination, page, total_pages, total = get_paginated(products, page, per_page=18)
+    def url_builder(p):
+        return url_for('products', page=p)
     
-    return render_template('products/products.html', products=products.all(), display=pagination.items, pagination=pagination, query=query, products_all=products_all)
+    return render_template('products/products.html', 
+        total_display=total, 
+        db_total=db_total,
+        page=page,
+        total_pages=total_pages, 
+        pagination=pagination, 
+        query=query, 
+        url_builder=url_builder
+    )
 
 #PRODUCT DETAIL
 @app.route('/products/<string:upc>')
@@ -264,6 +191,54 @@ def product_deals(upc):
     
 
     return render_template('products/product_deals.html', product=product)
+
+#PRODUCT NEW DEAL
+
+@app.route("/product/<string:upc>/new_deal", methods=["GET", "POST"])
+def product_new_deal(upc):
+    product = Product.query.get_or_404(upc)
+
+    if request.method == "POST":
+        store = request.form.get("store")
+        if not store:
+          store = request.form.get("store-input")
+          flash(store)
+        price_str = request.form.get("price")
+        price = float(re.sub(r'[^\d.]', '', price_str)) if price_str else None
+        url = request.form.get("url")
+        user_id = current_user.id if current_user.is_authenticated else None
+        lat = request.form.get("location-lat")
+        lng = request.form.get("location-lng")
+        if not lat or not lng:
+          lat, lng = current_user.latitude, current_user.longitude
+
+        if store and price:
+            try:
+                new_deal = Deal(
+                    product_id=product.upc,
+                    store=store,
+                    price=float(price),
+                    url=url or None,
+                    latitude=lat,
+                    longitude=lng,
+                    user_id=user_id,
+                    source="user",
+                )
+                db.session.add(new_deal)
+                db.session.commit()
+                flash("Thanks! Your deal was added.", "success")
+                return redirect(url_for("product_detail", upc=product.upc))
+            except Exception as e:
+                flash(f"Error submitting deal: {e}", "danger")
+
+    deals = product.deals
+    return render_template("products/product_new_deal.html",
+      upc=upc, 
+      product=product,
+      GOOGLE_API_KEY=os.environ.get('GOOGLE_API_KEY'),
+      user_lat=current_user.latitude if current_user.is_authenticated else None,
+      user_lng=current_user.longitude if current_user.is_authenticated else None
+    )
 
 #PRODUCT COMMENTS
 @app.route('/products/<string:upc>/comments')
@@ -420,18 +395,51 @@ def reject_suggestion(product_upc):
 @app.route('/discover')
 @login_required
 def discover():
+    tab = request.args.get('tab', 'users')  # default to 'users'
+    
     user = current_user
     user_favorites = get_user_favorites(user.id)
     user_ratings = get_user_ratings(user.id)
 
-    similar_users = find_similar_users(user.id)
-    recommended_products = recommend_products(user_favorites, user_ratings)
-    nearby_deals = get_nearby_deals(user.city, recommended_products)
+    page = request.args.get('page', 1, type=int)
+    total_pages = 1
+    total_display = 0
 
+    similar_users  = ''
+    recommended_products = ''
+    potential_groups = ''
+    nearby_users = ''
+    nearby_deals = ''
+
+    if tab == 'users':
+        similar_users = find_similar_users(current_user.id)
+        similar_users, pages, total_pages, total_display = get_paginated(similar_users, page, per_page=9)
+    if tab == 'products':
+        similar_users = find_similar_users(current_user.id)
+        recommended_products = recommend_products(user, other_users=similar_users)
+        recommended_products, pages, total_pages, total_display = get_paginated(recommended_products, page, per_page=9)
+    if tab == 'groups':
+        potential_groups = get_potential_groups(user)
+        potential_groups, pages, total_pages, total_display = get_paginated(potential_groups, page, per_page=9)
+    if tab == 'deals':
+        nearby_users = current_user.nearby_users(radius_km=40)
+        nearby_deals = current_user.nearby_deals(radius_km=40)
+        nearby_deals, pages, total_pages, total_display = get_paginated(nearby_deals, page, per_page=24)
+
+    def url_builder(p):
+        return url_for('discover', tab=tab, page=p)
+    
     return render_template('discover.html',
                            similar_users=similar_users,
+                           total_display=total_display,
+                           tab=tab,
+                           page=page, 
+                           total_pages=total_pages,
                            recommended_products=recommended_products,
-                           nearby_deals=nearby_deals)
+                           nearby_users=nearby_users,
+                           potential_groups=potential_groups,
+                           nearby_deals=nearby_deals,
+                           url_builder=url_builder)
 
 
 #CHECK UPC
@@ -519,6 +527,37 @@ def lookup_upc(upc):
 
     return jsonify({"error": "Product not found"}), 404
 
+#SCRAPE DEAL
+@app.route('/scrape_deal', methods=['POST'])
+def scrape_deal():
+    url = request.json.get('url')
+    headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Try extracting some common data points
+        title = soup.title.string.strip() if soup.title else ''
+        price = ''  # You could try using soup.select to find prices
+        store = 'Costco' if 'costco' in url else 'Unknown'
+
+        return jsonify({
+            'success': True,
+            'product_name': title,
+            'price': price,
+            'store': store
+        })
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'error': 'Request timed out.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Scraping failed: {str(e)}'})
+
+    
 
 #USER HANDLING
 @app.route('/login', methods=['GET', 'POST'])
@@ -536,7 +575,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('login'))
+    return redirect(request.referrer or url_for('index'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -545,7 +584,7 @@ def register():
         new_user = User(username=request.form['username'], email=request.form['email'], password=hashed_pw, city=request.form['city'])
         db.session.add(new_user)
         db.session.commit()
-        return redirect(url_for('login'))
+        return redirect(url_for('products'))
     return render_template('user_admin/register.html')
 
 # Whitelist of supported cities
@@ -576,6 +615,21 @@ def check_location():
             "error": str(e)
         })
 
+@app.route("/update-location", methods=["POST"])
+@login_required
+def update_location():
+    data = request.get_json()
+    lat = data.get("latitude")
+    lon = data.get("longitude")
+    
+    if lat and lon:
+        current_user.latitude = lat
+        current_user.longitude = lon
+        db.session.commit()
+        return jsonify({"status": "success"}), 200
+    return jsonify({"status": "failed"}), 400
+
+
 @app.route('/product/<upc>/comment', methods=['POST'])
 @login_required
 def add_comment(upc):
@@ -583,7 +637,8 @@ def add_comment(upc):
     is_public = 'is_public' in request.form
     db.session.add(Comment(user_id=current_user.id, product_upc=upc, content=content, is_public=is_public))
     db.session.commit()
-    return redirect(url_for('product_detail', upc=upc))
+
+    return redirect(request.referrer or url_for('index'))
 
 @app.route('/product/<upc>/rate', methods=['POST'])
 @login_required
@@ -595,21 +650,22 @@ def rate(upc):
     else:
         db.session.add(Rating(user_id=current_user.id, product_upc=upc, score=score))
     db.session.commit()
-    return redirect(url_for('product_detail', upc=upc))
+    
+    return redirect(request.referrer or url_for('index'))
 
 @app.route('/product/<upc>/favorite', methods=['POST'])
 @login_required
 def favorite(upc):
     db.session.add(Favorite(user_id=current_user.id, product_upc=upc))
     db.session.commit()
-    return redirect(url_for('product_detail', upc=upc))
+    return redirect(request.referrer or url_for('index'))
 
 @app.route('/product/<upc>/unfavorite', methods=['POST'])
 @login_required
 def unfavorite(upc):
     Favorite.query.filter_by(user_id=current_user.id, product_upc=upc).delete()
     db.session.commit()
-    return redirect(url_for('product_detail', upc=upc))
+    return redirect(request.referrer or url_for('index'))
 
 
 if __name__ == '__main__':

@@ -12,7 +12,11 @@
     <p id="city-message" class="text-sm text-gray-600 mb-4"></p>
     
     <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="city" id="hidden-city">
+      <input type="hidden" name="country" id="hidden-country">
+      <input type="hidden" name="lat" id="hidden-lat">
+      <input type="hidden" name="lon" id="hidden-lon">
 
       <div class="mb-4">
         <label class="block text-gray-700">City</label>
@@ -59,8 +63,11 @@
             } else {
 	            document.getElementById("city-message").textContent = `There are already ${data.user_count} users in ${data.city}.`;
             }
+            document.getElementById("hidden-country").value = data.country;
             document.getElementById("hidden-city").value = data.city;
             document.getElementById("visible-city").value = data.city;
+            document.getElementById("hidden-lat").value = lat;
+            document.getElementById("hidden-lon").value = lon;
           } else {
             document.getElementById("location-denied").style.display = "block";
             document.getElementById("city-denied").textContent = `You're currently in ${data.city}. We’re not yet available there.`;

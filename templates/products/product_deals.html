@@ -11,19 +11,38 @@
     {% endif %}
   </aside>
 
-  <p><strong>{{ product.name }}</strong><br> {{ product.upc }}</p>
+  <p>
+  	<strong>{{ product.name }}</strong><br> 
+  	{{ product.upc }}<br>
+  	{% set avg = product.average_price() %}
+  	{% if avg %}
+  		Average Price - 
+          <span class="font-bold">${{ "%.2f"|format(avg) }}</span>
+  	{% endif %}
+  </p>
 </div>
 
-<div id="deals-data" class="text-sm text-gray-700 mt-4">
-	
-	<ul>
-	{% for deal in product.deals %}
-	  <li>{{ deal.store }} - ${{ "%.2f"|format(deal.price) }} ({{ deal.source }})</li>
-	{% else %}
-	  <li>No deals found.</li>
-	{% endfor %}
-	</ul>
-</div>
+{% if product.deals %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+    {% for deal in product.deals %}
+      <div class="bg-white shadow-md rounded-lg p-4 border border-gray-200 text-sm">
+        <div class="font-semibold text-gray-800">{{ deal.store }}</div>
+        <div class="text-gray-600 mt-1">
+          {% if deal.price < avg %}
+          <span class="text-green-600 font-bold">${{ "%.2f"|format(deal.price) }}</span>
+          {% elif deal.price == avg %}
+          <span class="font-bold">${{ "%.2f"|format(deal.price) }}</span>
+          {% else %}
+          <span class="text-red-600 font-bold">${{ "%.2f"|format(deal.price) }}</span>
+          {% endif %}
+          <span class="ml-2 text-xs text-gray-400">via <a href="{{deal.url}}">{{ deal.source }}</a></span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="text-gray-500 text-sm italic">No deals found.</div>
+{% endif %}
 
 
 {% endblock %}

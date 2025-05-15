@@ -11,20 +11,46 @@
     {% endif %}
   </aside>
 
-  <p><strong>{{ product.name }}</strong><br> {{ product.upc }}</p>
+  <p class='ml-2'><strong>{{ product.name }}</strong><br> {{ product.upc }}</p>
 </div>
 
-<div id="nutriment-data" class="text-sm text-gray-700 mt-4"></div>
+<div id="nutriment-data" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4"></div>
 
 <script>
+  // Function to format nutriment data in a readable and concise manner
   function formatNutriments(nutriments) {
     if (!nutriments || typeof nutriments !== 'object') return "No nutrition data available.";
 
-    let html = '<ul class="list-disc pl-5">';
-    for (const [key, value] of Object.entries(nutriments)) {
-      html += `<li><strong>${key}:</strong> ${value}</li>`;
-    }
-    html += '</ul>';
+    // List of key nutrients to display
+    const importantNutrients = [
+      { key: "energy-kcal", label: "Energy (kcal)" },
+      { key: "fat", label: "Fat (g)" },
+      { key: "saturated-fat", label: "Saturated Fat (g)" },
+      { key: "carbohydrates", label: "Carbohydrates (g)" },
+      { key: "sugars", label: "Sugars (g)" },
+      { key: "fiber", label: "Fiber (g)" },
+      { key: "proteins", label: "Proteins (g)" },
+      { key: "salt", label: "Salt (mg)" },
+      { key: "potassium", label: "Potassium (mg)" },
+      { key: "calcium", label: "Calcium (mg)" },
+      { key: "iron", label: "Iron (mg)" }
+    ];
+
+    let html = '';
+
+    // Loop through the list of important nutrients and display them if they exist
+    importantNutrients.forEach(function(nutrient) {
+      const value = nutriments[nutrient.key];
+      if (value) {
+        html += `
+          <div class="bg-gray-100 p-4 rounded-lg shadow-md">
+            <strong class="text-sm text-gray-800">${nutrient.label}:</strong> 
+            <span class="text-gray-600">${value}</span>
+          </div>
+        `;
+      }
+    });
+
     return html;
   }
 
@@ -40,4 +66,5 @@
     }
   });
 </script>
+
 {% endblock %}

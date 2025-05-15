@@ -5,6 +5,7 @@
   <h1 class="text-2xl font-bold mb-4">Create New Product</h1>
   
   <form method="POST" action="{{ url_for('new_product', upc=upc) }}" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input name="name" placeholder="Product Name" required class="input" />
     <input name="upc" placeholder="UPC" value="{{ upc }}" required class="input" />
     <input name="brand" placeholder="Brand" class="input" />
@@ -20,44 +21,72 @@
 <!-- UPC Status Message -->
 <div id="lookup-status" class="text-sm mb-2 text-gray-600"></div>
 <!-- Product Preview Area -->
-<div id="product-preview" class="mt-4 space-y-2">
-  <img id="product-image" src="" alt="Product Image" class="w-32 h-32 object-contain hidden">
-  <div id="nutriment-data" class="text-sm text-gray-700"></div>
-  <div id="offers-data" class="text-sm text-gray-700"></div>
+
+<div id="product-preview" class="mt-4 hidden">
+  <p class="text-sm text-gray-500 mb-4">
+    <span>Information Preview</span>
+  </p>
+  <div class="flex flex-col sm:flex-row items-start gap-4 bg-white p-4 rounded-lg shadow">
+    
+    <!-- Product Image -->
+    <img id="product-image" src="" alt="Product Image" 
+         class="w-32 h-32 object-contain rounded border border-gray-200 hidden sm:block" />
+
+    <!-- Product Info -->
+    <div class="flex-1 space-y-4">
+      <div id="nutriment-data" class="text-sm text-gray-700"></div>
+      <div id="offers-data" class="text-sm text-gray-700"></div>
+    </div>
+    
+  </div>
 </div>
+
 
 <script>
   function formatNutriments(nutriments) {
-    if (!nutriments || typeof nutriments !== 'object') return "No nutrition data available.";
+    if (!nutriments || typeof nutriments !== 'object') return "<p class='text-gray-500'>No nutrition data available.</p>";
+  
+    const entries = Object.entries(nutriments).slice(0, 12); // limit to 12
+    let html = '<div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-4">'; // Flex grid for responsive layout
 
-    let html = '<ul class="list-disc pl-5">';
-    for (const [key, value] of Object.entries(nutriments)) {
-      html += `<li><strong>${key}:</strong> ${value}</li>`;
+    for (const [key, value] of entries) {
+      html += `
+        <div class="flex flex-wrap gap-2">
+          <p class="bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 text-xs">${key}<br>
+          ${value}</p>
+        </div>
+     `;
     }
-    html += '</ul>';
+
+    html += '</div>';
     return html;
   }
 
-function formatOffers(offers) {
-  if (!Array.isArray(offers) || offers.length === 0) return "No offers data available.";
-
-  let html = '<ul class="list-disc pl-5">';
-  for (const offer of offers) {
-    html += `<li>
-      <strong>Merchant:</strong> ${offer.merchant || 'N/A'}<br>
-      <strong>Price:</strong> ${offer.price ? `$${offer.price}` : 'N/A'}<br>
-      <strong>Condition:</strong> ${offer.condition || 'N/A'}<br>
-      <strong>Link:</strong> <a href="${offer.link}" target="_blank">${offer.link}</a>
-    </li>`;
+  function formatOffers(offers) {
+    if (!offers || typeof offers !== 'object') return "<p class='text-gray-500'>No Offers data available.</p>";
+    const limitedOffers = offers.slice(0, 3); // show only 3 offers
+    let html = '<div class="space-y-4">';
+    for (const offer of limitedOffers) {
+      html += `
+        <div class="bg-white p-4 rounded-lg shadow text-sm text-gray-700">
+          <p><span class="font-medium text-gray-800">Merchant:</span> ${offer.merchant || 'N/A'}</p>
+          <p><span class="font-medium text-gray-800">Price:</span> ${offer.price ? `$${offer.price}` : 'N/A'}</p>
+          <p><span class="font-medium text-gray-800">Condition:</span> ${offer.condition || 'N/A'}</p>
+          <p><span class="font-medium text-gray-800">Link:</span> 
+            <a href="${offer.link}" target="_blank" class="text-blue-600 hover:underline">${offer.link}</a>
+          </p>
+        </div>
+      `;
+    }
+    html += '</div>';
+    return html;
   }
-  html += '</ul>';
-  return html;
-}
 
   async function lookupUPC(upc) {
     if (!upc) return;
 
     const statusDiv = document.getElementById("lookup-status");
+    const preInfo = document.getElementById("product-preview");
     const imageEl = document.getElementById("product-image");
     const nutrimentDiv = document.getElementById("nutriment-data");
     const offersDiv = document.getElementById("offers-data");
@@ -77,6 +106,8 @@ function formatOffers(offers) {
         document.querySelector('input[name="nutriments"]').value = JSON.stringify(data.data.nutriments || {});
         document.querySelector('input[name="offers"]').value = JSON.stringify(data.data.offers || {});
 
+        preInfo.classList.remove("hidden");
+        
         // Image preview
         if (data.data.image_url) {
           imageEl.src = data.data.image_url;
@@ -84,10 +115,14 @@ function formatOffers(offers) {
         }
 
         // Nutriment display
-        nutrimentDiv.innerHTML = formatNutriments(data.data.nutriments);
+        if (data.data.nutriments && Object.keys(data.data.nutriments).length > 0) {
+          nutrimentDiv.innerHTML = formatNutriments(data.data.nutriments);
+        }
 
         // Offers display
-        offersDiv.innerHTML = formatOffers(data.data.offers);
+        if (Array.isArray(data.data.offers) && data.data.offers.length > 0) {
+          offersDiv.innerHTML = formatOffers(data.data.offers);
+        }  
         
         if (data.source == 'OFF'){
           statusDiv.textContent = "Data Confirmed by World Food Facts";

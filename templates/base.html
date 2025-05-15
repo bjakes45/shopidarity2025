@@ -6,6 +6,11 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <!-- Tailwind CSS -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
+
 </head>
 
 <body>
@@ -57,6 +62,33 @@
 	  setTimeout(() => {
 	    document.querySelectorAll('#flash-messages > div').forEach(el => el.remove());
 	  }, 5000); // hides after 5 seconds
-	</script>
+  </script>
+  <script>
+    function updateLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            fetch("/update-location", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token() }}"
+              },
+            body: JSON.stringify({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            })
+          });
+        },
+        error => console.error("Geolocation error:", error)
+      );
+    }
+  }
+
+// Update every 60 seconds (tweak as needed)
+setInterval(updateLocation, 60000);
+updateLocation(); // Initial call
+</script>
+
 </body>
 </html>

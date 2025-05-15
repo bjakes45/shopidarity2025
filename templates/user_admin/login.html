@@ -4,6 +4,7 @@
 <div class="max-w-md mx-auto mt-10 p-6 bg-white shadow-md rounded-xl">
   <h2 class="text-2xl font-bold mb-4">Login</h2>
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="mb-4">
       <label class="block text-gray-700">Username</label>
       <input type="text" name="username" class="w-full border px-3 py-2 rounded-lg" required>

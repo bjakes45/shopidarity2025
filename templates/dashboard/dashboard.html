@@ -16,25 +16,25 @@
       </div>
     </section>
 
-    <!-- Ratings -->
-    <section id="ratings">
-      <h3 class="text-2xl font-bold mb-4">My Recent Ratings</h3>
-      <ul class="space-y-3">
-        {% for rating in ratings %}
-          <li class="bg-white p-4 rounded-xl shadow">
-            <div class="flex justify-between">
-              <a href="{{ url_for('product_detail', upc=rating.product.upc) }}" class="font-medium text-blue-600 hover:underline">
-                {{ rating.product.name }}
-              </a>
-              <span class="text-yellow-500 font-bold">{{ rating.score }}/5</span>
-            </div>
-            <p class="text-gray-500 text-sm">Rated on {{ rating.timestamp.strftime('%Y-%m-%d') }}</p>
-          </li>
-        {% else %}
-          <p>No ratings yet.</p>
-        {% endfor %}
-      </ul>
-    </section>
+<!-- Ratings -->
+<section id="ratings">
+  <h3 class="text-2xl font-bold mb-4">My Recent Ratings</h3>
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+    {% for rating in ratings %}
+      <div class="bg-white p-4 rounded-xl shadow">
+        <div class="flex justify-between">
+          <a href="{{ url_for('product_detail', upc=rating.product.upc) }}" class="font-medium text-blue-600 hover:underline">
+            {{ rating.product.name }}
+          </a>
+          <span class="text-yellow-500 font-bold">{{ rating.score }}/5</span>
+        </div>
+        <p class="text-gray-500 text-sm">Rated on {{ rating.timestamp.strftime('%Y-%m-%d') }}</p>
+      </div>
+    {% else %}
+      <p class="col-span-full">No ratings yet.</p>
+    {% endfor %}
+  </div>
+</section>
 
     <!-- Comments -->
     <section id="comments">
