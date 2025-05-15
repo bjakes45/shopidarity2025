@@ -279,9 +279,24 @@ def new_product():
         image_url = request.form['image_url']
         nutriments_raw = request.form.get('nutriments')
         nutriments = None
+
+        IMPORTANT_NUTRIENTS = [
+            "energy-kcal", "fat", "saturated-fat", "carbohydrates", "sugars",
+            "fiber", "proteins", "salt", "potassium", "calcium", "iron"
+        ]
+
+        def filter_important_nutrients(raw_nutriments):
+            try:
+                parsed = json.loads(raw_nutriments) if isinstance(raw_nutriments, str) else raw_nutriments
+                return {k: v for k, v in parsed.items() if k in IMPORTANT_NUTRIENTS}
+            except Exception as e:
+               print(f"Failed to parse or filter nutriments: {e}")
+            return None
+
         if nutriments_raw:
           try:
-              nutriments = json.loads(nutriments_raw) if isinstance(nutriments_raw, str) else nutriments_raw
+              nutriments_filter = filter_important_nutrients(nutriments_raw)
+              nutriments = json.loads(nutriments_filter) if isinstance(nutriments_filter, str) else nutriments_filter
           except json.JSONDecodeError as e:
             flash(f"Invalid JSON in 'nutriments': {e}", "error")
 
