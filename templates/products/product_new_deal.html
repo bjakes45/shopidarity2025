@@ -1,0 +1,206 @@
+{% extends "products/base.html" %}
+{% block title %}Product {{ product.upc }}{% endblock %}
+
+{% block detail %}
+<div id="info" class="flex space-x-6 mb-6">
+  <aside>
+    {% if product.image_url %}
+      <img src="{{ product.image_url }}" id="image-url" alt="Product Image" class="w-48 rounded border" />
+    {% else %}
+      <p class="italic text-gray-400">No image available</p>
+    {% endif %}
+  </aside>
+
+  <div>
+    <h2 class="text-xl font-semibold">{{ product.name }}</h2>
+    <p class="text-gray-600">UPC: {{ product.upc }}</p>
+    {% set avg = product.average_price() %}
+    {% if avg %}
+      <p class="text-green-700 font-bold mt-2">Average Price: ${{ "%.2f"|format(avg) }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- New Deal Submission Form -->
+<form id="new-deal-form" action="{{ url_for('product_new_deal', upc=product.upc) }}" method="post" novalidate>
+
+  <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
+
+  <label for="deal-url" class="block font-semibold mb-1">Enter Deal URL:</label>
+  <div class="flex gap-2 mb-4">
+    <input type="url" id="deal-url" name="url" class="p-2 border rounded w-full" placeholder="Enter product URL" >
+    <button type="button" id="fetch-btn" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Fetch</button>
+  </div>
+
+  <!-- Scraper Preview -->
+  <section id="scraper-preview" class="bg-gray-100 p-4 rounded mb-4 hidden" aria-live="polite" aria-atomic="true">
+    <h3 class="font-semibold mb-2">Scraped Info</h3>
+    <p><strong>Name:</strong> <span id="scraped-name">[None]</span></p>
+    <p><strong>Price:</strong> <span id="scraped-price">[None]</span></p>
+    <p><strong>Store:</strong> <span id="scraped-store">[None]</span></p>
+    <button type="button" id="use-scraped-btn" class="mt-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition">Use This Data</button>
+  </section>
+
+  <div class="flex gap-4 mb-4">
+    <div class="w-1/4">
+      <label for="price" class="font-semibold">Price:</label>
+      <input type="text" id="price" name="price" class="p-2 border rounded w-full" placeholder="$0.00" inputmode="decimal" autocomplete="off" required>
+    </div>
+    <div class="w-3/4">
+
+      <label for="store-input" class="font-semibold">Store:</label>
+      <!--
+      <input id="store-input" name="store-input" type="text" autocomplete="off" />
+      -->
+      <input type="text" id="store-input" name='store-input' class="p-2 border rounded mb-2 w-full" placeholder="Search for store..." required>
+      <input type="hidden" id="store" name="store" />
+    </div>
+  </div>
+
+  <!-- Location Picker -->
+  <div class="mb-4">
+    <label for="map" class="block font-semibold mb-1">Pin Deal Location:</label>
+    <div id="map" class="w-full h-64 rounded border" role="region" aria-label="Map to select deal location"></div>
+    <input type="hidden" id="location-lat" name="location-lat" aria-hidden="true">
+    <input type="hidden" id="location-lng" name="location-lng" aria-hidden="true">
+  </div>
+
+  <button type="submit" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow transition">Submit Deal</button>
+</form>
+
+<!-- Leaflet Map Initialization -->
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const lat = {{ user_lat | default(51.505) }};
+    const lng = {{ user_lng | default(-0.09) }};
+    window.map = L.map('map').setView([lat, lng], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(window.map);
+
+    let marker;
+    window.map.on('click', (e) => {
+      const { lat, lng } = e.latlng;
+      if (marker) marker.remove();
+      marker = L.marker([lat, lng]).addTo(window.map).bindPopup("Selected location").openPopup();
+      document.getElementById('location-lat').value = lat;
+      document.getElementById('location-lng').value = lng;
+    });
+  });
+</script>
+
+<!-- Deal Scraper Logic -->
+<script>
+  (() => {
+    const csrf = document.getElementById('csrf_token').value;
+    const fetchBtn = document.getElementById('fetch-btn');
+    const urlInput = document.getElementById('deal-url');
+    const preview = document.getElementById('scraper-preview');
+    const scrapedName = document.getElementById('scraped-name');
+    const scrapedPrice = document.getElementById('scraped-price');
+    const scrapedStore = document.getElementById('scraped-store');
+    const useScrapedBtn = document.getElementById('use-scraped-btn');
+    const priceInput = document.getElementById('price');
+    const storeInput = document.getElementById('store');
+
+    fetchBtn.addEventListener('click', async () => {
+      const url = urlInput.value.trim();
+      if (!url) return alert("Please enter a valid URL.");
+
+      fetchBtn.disabled = true;
+      try {
+        const response = await fetch('/scrape_deal', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrf
+          },
+          body: JSON.stringify({ url })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          scrapedName.textContent = data.product_name || '[None]';
+          scrapedPrice.textContent = data.price || '[None]';
+          scrapedStore.textContent = data.store || '[None]';
+          preview.classList.remove('hidden');
+        } else {
+          alert(data.error || 'Failed to fetch product info.');
+          preview.classList.add('hidden');
+        }
+      } catch (err) {
+        console.error(err);
+        alert("An error occurred while fetching product info.");
+        preview.classList.add('hidden');
+      } finally {
+        fetchBtn.disabled = false;
+      }
+    });
+
+    useScrapedBtn.addEventListener('click', () => {
+      if (scrapedPrice.textContent !== '[None]') priceInput.value = scrapedPrice.textContent;
+      if (scrapedStore.textContent !== '[None]') storeInput.value = scrapedStore.textContent;
+    });
+  })();
+</script>
+
+<!-- Format Price Input -->
+<script>
+  (() => {
+    const price = document.getElementById('price');
+
+    price.addEventListener('focus', () => {
+      if (price.value.startsWith('$')) {
+        price.value = price.value.slice(1);
+      }
+    });
+
+    price.addEventListener('blur', () => {
+      let val = price.value.replace(/[^0-9.]/g, '').trim();
+      if (!val) return;
+
+      const [intPart, ...rest] = val.split('.');
+      const floatVal = parseFloat(`${intPart}.${rest.join('')}`);
+      price.value = isNaN(floatVal) ? '' : `$${floatVal.toFixed(2)}`;
+    });
+  })();
+</script>
+
+<!-- Google Places Autocomplete -->
+<script
+  src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_API_KEY }}&libraries=places&callback=initAutocomplete"
+  async
+  defer
+  loading="async"
+></script>
+<script type="module" src="https://unpkg.com/@googlemaps/extended-component-library@latest"></script>
+
+<script>
+  function initAutocomplete() {
+    const input = document.getElementById('store-input');
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+      componentRestrictions: { country: 'ca' },
+      fields: ['geometry', 'name', 'formatted_address']
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry || !place.geometry.location) {
+        alert('No details available.');
+        return;
+      }
+
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      document.getElementById('store').value = place.name;
+      document.getElementById('location-lat').value = lat;
+      document.getElementById('location-lng').value = lng;
+
+      if (window.marker) window.map.removeLayer(window.marker);
+      window.marker = L.marker([lat, lng]).addTo(window.map).bindPopup(place.name).openPopup();
+      window.map.setView([lat, lng], 15);
+    });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% block title %}Discover{% endblock %}
+
+{% block content %}
+{% from "partials/_pagination.html" import render_pagination %}
+{% from "partials/_products.html" import render_products %}
+
+<div>
+  <div class="flex items-center border-b border-gray-300 mb-4">
+    <h1 class="text-2xl font-extrabold mr-6">Discover</h1>
+    <ul class="flex space-x-1 text-base" id="tab-nav">
+      {% for name, label in [('users', 'Similar Users'), ('products', 'Recommended Products'), ('groups', 'Potential Groups'), ('deals', 'Nearby Deals')] %}
+        <li>
+          <a href="{{ url_for('discover', tab=name) }}"
+             class="tab-link px-3 py-1.5 rounded-t-md transition-all duration-150
+                {{ 
+                  'bg-white border-x border-t border-gray-300 -mb-px text-black font-semibold' if tab == name 
+                  else 'bg-gray-100 text-grey-500 hover:bg-gray-200' 
+                }}"
+             aria-current="{{ 'page' if tab == name else 'false' }}"
+             data-target="{{ name }}">
+            {{ label }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+
+  <section id="users" class="mb-6 {{ '' if tab == 'users' else 'hidden' }}">
+    {% if similar_users %}
+      <p class="text-sm text-gray-500 mb-4">
+        {{ total_display }} Users Found
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for user in similar_users %}
+          <div class="p-4 border rounded shadow bg-white">
+          	<div class="flex justify-center items-center space-x-4 mt-2">          		
+            	<img
+                      src="{{ user.avatar_url or url_for('static', filename='default-avatar-256.png') }}"
+                      alt="{{ user.username }}"
+                      class="w-12 h-12 rounded-full border object-cover"
+                    />
+                <h3 class="text-lg font-bold">{{ user.username }}</h3>
+          	</div>
+            <p class="text-sm text-gray-600 mb-2">Similarity Score: {{ "%.2f"|format(user.similarity_score) }} - Distance {{ "%.2f"|format(user.dist) }} km</p>
+
+            {% if user.shared_favorites_list %}
+              <div class="text-sm">
+                <p class="font-semibold mb-1">Shared Favorites: {{ user.shared_favorites_list|length }}</p>
+                <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {% for product in user.shared_favorites_list[:8] %}
+                    <a href="{{ url_for('product_detail', upc=upc) }}" class="bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 text-xs">
+                      {{ product.name[:15] }}
+                      {{ product.upc }}
+                    </a>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      {{ render_pagination(page, total_pages, url_builder) }}
+
+    {% else %}
+      <p class="text-gray-600">No similar users found, yet.</p>
+    {% endif %}
+  </section>
+
+  <section id="products" class="mb-6 {{ '' if tab == 'products' else 'hidden' }}">
+    <p class="text-sm text-gray-500 mb-4">
+      {{ total_display }} Products Suggested
+    </p>
+    {% if recommended_products %}
+      
+      {{ render_products(recommended_products, current_user)}}
+        
+    {% else %}
+      <p><br>No recommended products found, yet.</p>
+    {% endif %}
+    
+    {{ render_pagination(page, total_pages, url_builder) }}
+  </section>
+
+
+  <section id="groups" class="{{ '' if tab == 'groups' else 'hidden' }}">
+
+    {% if potential_groups %}
+      <p class="text-sm text-gray-500 mb-4">
+        {{ total_display }} Potential Groups
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for group in potential_groups %}
+          <div class="rounded-xl border p-4 shadow bg-white hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold">
+              <a href="{{ url_for('product_detail', upc=group.product.upc) }}">{{ group.product.name }}</a>
+            </h3>
+
+            <div class="text-sm text-gray-600 mb-2">
+              Interested users: {{ group.interested_users | length }}
+            </div>
+
+            <!-- Uniform user grid -->
+            <div class="grid grid-cols-3 gap-2 mb-4">
+              {% for user in group.interested_users %}
+                {% if loop.index <= 6 %}
+                  <div class="flex flex-col items-center space-y-1 text-center">
+                    <img
+                      src="{{ user.avatar_url or url_for('static', filename='default-avatar-256.png') }}"
+                      alt="{{ user.username }}"
+                      class="w-12 h-12 rounded-full border object-cover"
+                    />
+                    <span class="text-xs truncate max-w-[60px]">{{ user.username }}</span>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+  
+            <form action="#" method="post">
+              <input type="hidden" name="product_id" value="{{ group.product.id }}">
+              <button type="submit"
+                class="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 text-sm">
+                Start Group
+              </button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+      {{ render_pagination(page, total_pages, url_builder) }}
+    {% else %}
+      <p class="text-gray-600">
+        No potential groups found yet. Add more favorites or ratings to see suggestions!
+      </p>
+    {% endif %}
+  </section>
+
+<section id="deals" class="mb-6 {{ '' if tab == 'deals' else 'hidden' }}">
+  <p class="text-sm text-gray-500 mb-4">
+    Your location: {{ current_user.latitude }}, {{ current_user.longitude }}
+  </p>
+
+  <!-- Map container -->
+  <div id="map" class="w-full mb-6 rounded border" style="height: 500px;"></div>
+
+  <!-- User and deal cards -->
+<!-- When we switch this section to show Deals Geodata
+  <ul class="grid grid-cols-2 md:grid-cols-6 gap-4">
+    {% if nearby_users %}
+      {% for user in nearby_users %}
+        <div class="bg-white shadow-md rounded-lg p-4">
+          <h3 class="text-lg font-bold">{{ user.username }}</h3>
+          <p class="text-sm text-gray-600">Distance: {{ user.distance_km }} km</p>
+          {% if user.city %}
+            <p class="text-sm text-gray-500">City: {{ user.city }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No nearby users found.</p>
+    {% endif %}
+  </ul>
+-->
+
+
+  <ul class="grid grid-cols-2 md:grid-cols-3 gap-4">
+    {% if nearby_deals %}
+      {% for deal in nearby_deals %}
+        <li class="border p-4 rounded">
+          <p class="font-bold">{{ deal.product.name }}</p>
+          <p><span class="text-sm text-gray-600">{{ deal.store }}</span></p>
+          <p><span class="text-sm text-gray-600">Distance: {{ deal.distance_km }} km </span> – <span class="font-bold">${{ "%.2f"|format(deal.price) }}</span></p>
+        </li>
+      {% endfor %}
+    {% else %}
+      <p></br>No nearby deals found, yet.</p>
+    {% endif %}
+  </ul>
+    {{ render_pagination(page, total_pages, url_builder) }}
+
+  <!-- Map Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const map = L.map('map').setView([{{ current_user.latitude }}, {{ current_user.longitude }}], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Current user marker
+      L.marker([{{ current_user.latitude }}, {{ current_user.longitude }}])
+        .addTo(map)
+        .bindPopup("You are here");
+
+      // Nearby deal markers
+      {% for deal in nearby_deals %}
+        L.marker([{{ deal.latitude }}, {{ deal.longitude }}])
+          .addTo(map)
+          .bindPopup("{{ deal.product.name }} - {{ deal.price }}");
+      {% endfor %}
+    });
+  </script>
+</section>
+
+</div>
+
+
+{% endblock %}

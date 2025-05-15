@@ -1,0 +1,69 @@
+{# _products.html #}
+{% macro render_products(products, current_user) %}
+
+      <ul class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {% for product in products %}
+
+          <li class="border p-4 rounded text-center bg-white shadow-sm">
+            <a href="{{ url_for('product_detail', upc=product.upc) }}" class="block text-lg font-semibold mb-1">
+              {{ product.name }}
+            </a>
+            <p class="text-sm text-gray-600 mb-2">{{ product.category+' - ' if product.category}}{{ 'UPC' if product.upc|length > 5 else 'PLU' }}: {{ product.upc }}</p>
+
+            <!-- Centered Inline Actions -->
+            <div class="flex flex-wrap justify-center items-center gap-2">
+            {% if current_user.is_authenticated %}
+              <!-- Favorite / Unfavorite -->
+              {% set is_favorite = current_user.favorites | selectattr('product', 'equalto', product) | list | length > 0 %}
+              {% if is_favorite %}
+                <!-- Show unfavorite button -->
+                <form method="post" action="{{ url_for('unfavorite', upc=product.upc) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                  <button class="text-red-600 border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition text-sm">
+                    ❤️ Remove Favorite
+                  </button>
+                </form>
+              {% else %}
+                <!-- Show favorite button -->
+                <form method="post" action="{{ url_for('favorite', upc=product.upc) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="text-blue-600 border border-blue-600 px-3 py-1 rounded hover:bg-blue-50 transition text-sm">
+                    ❤️ Favorite
+                  </button>
+                </form>
+              {% endif %}
+ 
+              <!-- Rating Form -->
+              <form action="{{ url_for('rate', upc=product.upc) }}" method="POST" class="flex items-center space-x-1 text-sm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="product_upc" value="{{ product.upc }}">
+                <label for="rating_{{ product.upc }}" class="text-xs">Rate:</label>
+                {% set user_rating = product.get_rating(current_user) %}
+                <select name="score" id="rating_{{ product.upc }}" class="text-xs border rounded px-1 py-0.5">
+                  <option value="">--</option>
+                  {% for i in range(1, 6) %}
+                    <option value="{{ i }}"
+                      {% if user_rating and user_rating.score == i %}
+                        selected
+                      {% endif %}
+                    >{{ i }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="text-xs text-green-600 hover:underline">✔</button>
+              </form>
+              
+              {% endif %}
+              <!-- Average Rating -->
+              <div class="text-center mt-1">
+                <h3 class="font-medium text-sm">Average Rating:</h3>
+                <p class="text-yellow-600 text-lg">
+                  {{ "%.2f"|format(product.average_rating()) if product.average_rating is defined and product.average_rating() is not none else '–' }}
+                </p>
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+
+      </ul>
+{% endmacro %}
