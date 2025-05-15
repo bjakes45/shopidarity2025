@@ -278,10 +278,13 @@ def new_product():
         brand = request.form['brand']
         image_url = request.form['image_url']
         nutriments_raw = request.form.get('nutriments')
-        try:
-            nutriments = json.loads(nutriments_raw) if nutriments_raw else None
-        except json.JSONDecodeError:
-            nutriments = None  # fallback if invalid
+        nutriments = None
+        if nutriments_raw:
+          try:
+              nutriments = json.loads(nutriments_raw) if isinstance(nutriments_raw, str) else nutriments_raw
+          except json.JSONDecodeError as e:
+            flash(f"Invalid JSON in 'nutriments': {e}", "error")
+
         offers_raw = request.form.get('offers')
         try:
             offers = json.loads(offers_raw) if offers_raw else None
