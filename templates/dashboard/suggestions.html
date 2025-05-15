@@ -11,10 +11,13 @@
 	      <p><strong>Category:</strong> {{ product.category }}</p>
 	      <p><strong>Description:</strong> {{ product.description }}</p>
 	      <form method="POST" action="{{ url_for('approve_suggestion', product_upc=product.upc) }}" class="inline">
+            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
 	        <button class="bg-green-600 text-white px-4 py-1 rounded" type="submit">Approve</button>
 	      </form>
 	      <form method="POST" action="{{ url_for('reject_suggestion', product_upc=product.upc) }}" class="inline ml-2">
+            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
 	        <button class="bg-red-600 text-white px-4 py-1 rounded" type="submit">Reject</button>
+
 	      </form>
 	    </div>
 	  {% else %}
