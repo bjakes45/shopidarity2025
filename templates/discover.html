@@ -192,9 +192,10 @@
               </ul>
             </div>
           {% else %}
-            <button class="mt-4 bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
-              🛒 Host Collective Cart
-            </button>
+            <a href="{{ url_for('create_cart', deal_id=deal.id) }}"
+               class="mt-2 inline-block text-center px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-medium transition">
+              🛒 {% if current_user.is_authenticated %}Host{% else %}Join{% endif %} a Collective Cart
+            </a>
           {% endif %}
         </li>
       {% endfor %}
