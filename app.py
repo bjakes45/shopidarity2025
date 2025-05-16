@@ -222,6 +222,10 @@ def product_deals(upc):
 def product_new_deal(upc):
     product = Product.query.get_or_404(upc)
 
+    if not current_user.is_authenticated:
+        flash('Login Required')
+        return redirect(request.referrer or url_for('index'))
+
     if request.method == "POST":
         store = request.form.get("store")
         if not store:
