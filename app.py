@@ -156,7 +156,7 @@ def products():
         )
         ).filter_by(status=ProductStatus.APPROVED).all()
     
-    pagination, page, total_pages, total = get_paginated(products, page, per_page=18)
+    pagination, page, total_pages, total = get_paginated(products, page, per_page=24)
     def url_builder(p):
         return url_for('products', page=p)
     
