@@ -7,7 +7,7 @@
   <!-- Sidebar -->
 <aside class="w-64 bg-gray-100 min-h-screen p-6">
   <h2 class="text-xl font-semibold mb-6 text-gray-800">
-    <a href="{{ url_for('product_detail', upc=product.upc) }}" class="text-blue-600 hover:underline">UPC: {{ product.upc }}</a>
+    <a href="{{ url_for('product_detail', upc=product.upc) }}" class="text-blue-600 hover:underline">{% if product.upc|length in [12,13]%}UPC:{% else %}PLU:{% endif %}{{ product.upc }}</a>
   </h2>
 
   <nav class="space-y-4">
