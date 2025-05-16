@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Discover{% endblock %}
+{% block title %}FAQ{% endblock %}
 
 {% block content %}
 {% from "partials/_pagination.html" import render_pagination %}
@@ -101,6 +101,17 @@
             </div>
         </details>
 -->
+
+        <div class="border-t pt-6 mt-10">
+          <h2 class="text-xl font-semibold text-gray-800">Still have questions?</h2>
+          <p class="mt-2 text-gray-600">
+            Want to get involved, ask more questions, or start a cart in your community? <br>
+              <a href="{{ url_for('home') }}#join" class="text-blue-600 hover:underline font-medium">
+                Learn more and join us here.
+              </a>
+          </p>
+        </div>
+        
     </div>
 </div>
 
