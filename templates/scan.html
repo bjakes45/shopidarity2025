@@ -158,6 +158,11 @@
 
     scanAgainBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      productDetailEl.classList.add('hidden');
+      productDetailEl.innerHTML = ''
+      addProductPrompt.classList.add('hidden');
+      addProductPrompt.innerHTML = ''
+
       startScanner();
     });
 

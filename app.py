@@ -260,8 +260,8 @@ def product_new_deal(upc):
       upc=upc, 
       product=product,
       GOOGLE_API_KEY=os.environ.get('GOOGLE_API_KEY'),
-      user_lat=current_user.latitude if current_user.is_authenticated else None,
-      user_lng=current_user.longitude if current_user.is_authenticated else None
+      user_lat=current_user.latitude if current_user.is_authenticated else 49.2350654,
+      user_lng=current_user.longitude if current_user.is_authenticated else -123.025867
     )
 
 #PRODUCT COMMENTS
@@ -460,15 +460,10 @@ def reject_suggestion(product_upc):
 
 #DISCOVERY
 @app.route('/discover')
-@login_required
 def discover():
-    tab = request.args.get('tab', 'users')  # default to 'users'
-    
-    user = current_user
-    user_favorites = get_user_favorites(user.id)
-    user_ratings = get_user_ratings(user.id)
-
+    tab = request.args.get('tab', 'deals')  # default to 'deals'
     page = request.args.get('page', 1, type=int)
+
     total_pages = 1
     total_display = 0
 
@@ -478,23 +473,44 @@ def discover():
     nearby_users = ''
     nearby_deals = ''
 
-    if tab == 'users':
-        similar_users = find_similar_users(current_user.id)
-        similar_users, pages, total_pages, total_display = get_paginated(similar_users, page, per_page=9)
-    if tab == 'products':
-        similar_users = find_similar_users(current_user.id)
-        recommended_products = recommend_products(user, other_users=similar_users)
-        recommended_products, pages, total_pages, total_display = get_paginated(recommended_products, page, per_page=9)
-    if tab == 'groups':
-        potential_groups = get_potential_groups(user)
-        potential_groups, pages, total_pages, total_display = get_paginated(potential_groups, page, per_page=9)
-    if tab == 'deals':
-        nearby_users = current_user.nearby_users(radius_km=40)
-        nearby_deals = current_user.nearby_deals(radius_km=40)
-        nearby_deals, pages, total_pages, total_display = get_paginated(nearby_deals, page, per_page=75)
-
     def url_builder(p):
         return url_for('discover', tab=tab, page=p)
+    
+    if tab != 'deals':
+        if not current_user.is_authenticated:
+            flash('Must be logged in!','warning')
+            return redirect(url_for('discover'))
+
+        user = current_user
+        user_favorites = get_user_favorites(user.id)
+        user_ratings = get_user_ratings(user.id)
+        user_lat = current_user.latitude 
+        user_lng = current_user.longitude
+
+        if tab == 'users':
+            similar_users = find_similar_users(current_user.id)
+            similar_users, pages, total_pages, total_display = get_paginated(similar_users, page, per_page=9)
+        if tab == 'products':
+            similar_users = find_similar_users(current_user.id)
+            recommended_products = recommend_products(user, other_users=similar_users)
+            recommended_products, pages, total_pages, total_display = get_paginated(recommended_products, page, per_page=9)
+        if tab == 'groups':
+            potential_groups = get_potential_groups(user)
+            potential_groups, pages, total_pages, total_display = get_paginated(potential_groups, page, per_page=9)
+    else:
+        if current_user.is_authenticated:
+            nearby_users = current_user.nearby_users(radius_km=40)
+            nearby_deals = current_user.nearby_deals(radius_km=40)
+            nearby_deals, pages, total_pages, total_display = get_paginated(nearby_deals, page, per_page=75)
+            user_lat = current_user.latitude 
+            user_lng = current_user.longitude
+        else:
+            nearby_users = ''
+            nearby_deals = Deal.query.all()
+            nearby_deals, pages, total_pages, total_display = get_paginated(nearby_deals, page, per_page=75)
+            user_lat = 49.2350654 
+            user_lng = -123.025867
+
     
     return render_template('discover.html',
                            similar_users=similar_users,
@@ -502,6 +518,8 @@ def discover():
                            tab=tab,
                            page=page, 
                            total_pages=total_pages,
+                           user_lat=user_lat,
+                           user_lng=user_lng,
                            recommended_products=recommended_products,
                            nearby_users=nearby_users,
                            potential_groups=potential_groups,
@@ -793,7 +811,7 @@ def cart_detail(cart_id):
     return render_template('carts/create_cart.html')
 
 @app.route('/create_cart/<deal_id>', methods=['GET','POST'])
-@login_required
+#@login_required
 def create_cart(deal_id):
     flash("Coming Soon!!")
     return redirect(request.referrer or url_for('index'))

@@ -51,7 +51,7 @@
           {% else %}
             <a href="{{ url_for('create_cart', deal_id=deal.id) }}"
                class="mt-2 inline-block text-center px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-medium transition">
-              🛒 Host a Collective Cart
+              🛒 {% if current_user.is_authenticated %}Host{% else %}Join{% endif %} a Collective Cart
             </a>
           {% endif %}
         </div>

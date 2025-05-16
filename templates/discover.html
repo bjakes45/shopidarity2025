@@ -139,7 +139,11 @@
 
 <section id="deals" class="mb-6 {{ '' if tab == 'deals' else 'hidden' }}">
   <p class="text-sm text-gray-500 mb-4">
-    Your location: {{ current_user.latitude }}, {{ current_user.longitude }}
+    {% if current_user.is_authenticated %}
+      Your location: {{ user_lat }}, {{ user_lng }}
+     {% else%}
+       This is a demonstration for non-Users. Most data is simulated for testing purposes.
+     {% endif %}
   </p>
 
   <!-- Map container -->
@@ -206,7 +210,7 @@
   <!-- Map Script -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const map = L.map('map').setView([{{ current_user.latitude }}, {{ current_user.longitude }}], 13);
+      const map = L.map('map').setView([{{ user_lat }}, {{ user_lng }}], 13);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
@@ -225,11 +229,12 @@
           markerColor: 'red',
           prefix: 'fa'
         });
- 
-      // Current user marker
-      L.marker([{{ current_user.latitude }}, {{ current_user.longitude }}], { icon: marker })
-        .addTo(map)
-        .bindPopup("You are here");
+      {% if current_user.is_authenticated %}
+        // Current user marker
+        L.marker([{{ current_user.latitude }}, {{ current_user.longitude }}], { icon: marker })
+          .addTo(map)
+          .bindPopup("You are here");
+      {% endif %}
     });
   </script>
 </section>
