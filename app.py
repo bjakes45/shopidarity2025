@@ -280,6 +280,7 @@ def product_comments(upc):
 #NEW PRODUCT
 @app.route('/products/new', methods=['GET', 'POST'])
 def new_product():
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
 
     rate_limit_response = enforce_rate_limit()
     if rate_limit_response:
