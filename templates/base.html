@@ -51,6 +51,7 @@
 	      <span class="mr-4">Hello, <a href="{{ url_for('dashboard') }}">{{ current_user.username }}!</a></span>
 	      <a href="{{ url_for('logout') }}" class="bg-red-500 px-3 py-1 rounded hover:bg-red-600">Logout</a>
 	    {% else %}
+  	      <a href="{{ url_for('faq') }}" class='mr-2'>FAQ </a>
 	      <a href="{{ url_for('login') }}" class="bg-blue-500 px-3 py-1 rounded hover:bg-blue-600">Login</a>
 	    {% endif %}
 	  </div>

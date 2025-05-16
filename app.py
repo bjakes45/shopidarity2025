@@ -817,11 +817,14 @@ def cart_detail(cart_id):
 @app.route('/create_cart/<deal_id>', methods=['GET','POST'])
 #@login_required
 def create_cart(deal_id):
-    flash("Coming Soon!!")
+    flash("Coming Soon")
     return redirect(request.referrer or url_for('index'))
     #return render_template('carts/create_cart.html')
 
 
+@app.route("/faq")
+def faq():
+    return render_template("faq.html")
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}Discover{% endblock %}
+
+{% block content %}
+{% from "partials/_pagination.html" import render_pagination %}
+{% from "partials/_products.html" import render_products %}
+
+<body class="bg-gray-50 text-gray-800">
+
+<div class="max-w-3xl mx-auto p-6">
+    <h1 class="text-3xl font-bold text-center mb-8">🛍️ Shopidarity FAQ</h1>
+
+    <div class="space-y-4">
+
+        <!-- FAQ item -->
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
+            <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+                ❓ What is Shopidarity?
+            </summary>
+            <div class="mt-2 text-gray-700">
+                Shopidarity is a solidarity-based shopping tool. You can find and share deals, then team up with others for bulk buying — saving money and building community power.
+            </div>
+        </details>
+
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
+            <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+                🔁 How does it work?
+            </summary>
+            <div class="mt-2 text-gray-700">
+                <ol class="list-decimal ml-5 space-y-1">
+                    <li>Scan a barcode</li>
+                    <li>Add a new product (if not found)</li>
+                    <li>Add a deal – via link, receipt, API, or manually</li>
+                    <li>Host or join a collective cart to bulk buy together</li>
+                </ol>
+            </div>
+        </details>
+
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
+            <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+                🧾 How do I add a deal?
+            </summary>
+            <div class="mt-2 text-gray-700">
+                You can submit a deal in four ways:
+                <ul class="list-disc ml-5 space-y-1">
+                    <li>Paste a product link</li>
+                    <li>Upload a receipt photo</li>
+                    <li>Sync with a proof-of-purchase API (coming soon)</li>
+                    <li>Enter it manually</li>
+                </ul>
+            </div>
+        </details>
+
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
+            <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+                🛒 What is a collective cart?
+            </summary>
+            <div class="mt-2 text-gray-700">
+                A group order where people buy together to save money. Hosts set a quantity goal and invite others. Once the goal is reached, one big order is placed.
+            </div>
+        </details>
+
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
+            <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+                📍 What are groups?
+            </summary>
+            <div class="mt-2 text-gray-700">
+                Join a local group focused on a specific product (like tofu or rice). Get alerts for deals and carts in your area, and coordinate pickups together.
+            </div>
+        </details>
+
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
+            <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+                🔐 Is my data safe?
+            </summary>
+            <div class="mt-2 text-gray-700">
+                Yes. All API features are opt-in. You choose what to share, and we never sell your data.
+            </div>
+        </details>
+
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
+            <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+                ⚙️ Coming soon:
+            </summary>
+            <div class="mt-2 text-gray-700">
+                <ul class="list-disc ml-5 space-y-1">
+                    <li>Auto alerts for tracked products</li>
+                    <li>Trust scores for cart hosts and deal contributors</li>
+                    <li>Delivery coordination tools for collective carts</li>
+                </ul>
+            </div>
+        </details>
+
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
+            <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+                🧭 Need help?
+            </summary>
+            <div class="mt-2 text-gray-700">
+                If you're stuck or want to talk to a real person, reach out:<br>
+                📬 <strong>support@shopidarity.org</strong>
+            </div>
+        </details>
+
+    </div>
+</div>
+
+</body>
+</html>
+{% endblock %}
