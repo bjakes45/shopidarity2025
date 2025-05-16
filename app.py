@@ -109,8 +109,8 @@ def initialize_database():
       db.session.add(user)
       db.session.commit()
 
-    if User.query.count() <= 1:
-      seed_users_with_interactions()
+    #if User.query.count() <= 1:
+    #  seed_users_with_interactions()
 
     if Deal.query.count() <= 100:
       seed_deals()
