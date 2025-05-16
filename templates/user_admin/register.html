@@ -59,9 +59,9 @@
           if (data.allowed) {
             document.getElementById("registration-form").style.display = "block";
             if (data.user_count == 1) {
-	            document.getElementById("city-message").textContent = `There is already ${data.user_count} user in ${data.city}.`;
+	            document.getElementById("city-message").textContent = `There is already ${data.user_count} user in ${data.city}, ${data.country}.`;
             } else {
-	            document.getElementById("city-message").textContent = `There are already ${data.user_count} users in ${data.city}.`;
+	            document.getElementById("city-message").textContent = `There are already ${data.user_count} users in ${data.city}, ${data.country}.`;
             }
             document.getElementById("hidden-country").value = data.country;
             document.getElementById("hidden-city").value = data.city;
@@ -70,7 +70,10 @@
             document.getElementById("hidden-lon").value = lon;
           } else {
             document.getElementById("location-denied").style.display = "block";
-            document.getElementById("city-denied").textContent = `You're currently in ${data.city}. We’re not yet available there.`;
+            document.getElementById("city-denied").innerHTML = 
+              `You're currently in ${data.city}, ${data.country}... We’re not publicly available there, yet.<br>
+              <a href='/#join' class='underline hover:no-underline'>Sign up for our mailing list on our Homepage</a> to express your interest!<br><br>
+              A few, lucky people will be selected for early access in new regions!`;
           }
         });
     }

@@ -165,20 +165,43 @@
 -->
 
 
-  <ul class="grid grid-cols-2 md:grid-cols-3 gap-4">
+  <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
     {% if nearby_deals %}
       {% for deal in nearby_deals %}
-        <li class="border p-4 rounded">
-          <p class="font-bold">{{ deal.product.name }}</p>
-          <p><span class="text-sm text-gray-600">{{ deal.store }}</span></p>
-          <p><span class="text-sm text-gray-600">Distance: {{ deal.distance_km }} km </span> – <span class="font-bold">${{ "%.2f"|format(deal.price) }}</span></p>
+        <li class="bg-white border rounded-2xl shadow hover:shadow-md transition p-4 flex flex-col justify-between">
+          <a href="{{ url_for('deal_detail', deal_id=deal.id) }}" class="block">
+            <h3 class="font-semibold text-lg truncate">{{ deal.product.name }}</h3>
+            <p class="text-sm text-gray-600 mt-1">{{ deal.store }}</p>
+            <p class="text-sm text-gray-600 mt-1">
+              Distance: {{ deal.distance_km }} km – 
+              <span class="font-bold text-black">${{ "%.2f"|format(deal.price) }}</span>
+            </p>
+          </a>
+  
+          {% if deal.collective_carts %}
+            <div class="mt-4">
+              <p class="text-sm text-gray-500 font-medium mb-1">Collective Carts:</p>
+              <ul class="text-sm text-green-600 space-y-1">
+                {% for cart in deal.collective_carts %}
+                  <li>Share: <span class="font-bold">${{ "%.2f"|format(cart.share_cost) }}</span></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% else %}
+            <button class="mt-4 bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+              🛒 Host Collective Cart
+            </button>
+          {% endif %}
         </li>
       {% endfor %}
     {% else %}
-      <p></br>No nearby deals found, yet.</p>
+      <p class="text-gray-500 col-span-full text-center mt-8">No nearby deals found, yet.</p>
     {% endif %}
   </ul>
-    {{ render_pagination(page, total_pages, url_builder) }}
+
+<div class="mt-6">
+  {{ render_pagination(page, total_pages, url_builder) }}
+</div>
 
   <!-- Map Script -->
   <script>
@@ -188,18 +211,25 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
-
-      // Current user marker
-      L.marker([{{ current_user.latitude }}, {{ current_user.longitude }}])
-        .addTo(map)
-        .bindPopup("You are here");
+      
 
       // Nearby deal markers
       {% for deal in nearby_deals %}
         L.marker([{{ deal.latitude }}, {{ deal.longitude }}])
           .addTo(map)
-          .bindPopup("{{ deal.product.name }} - {{ deal.price }}");
+          .bindPopup("<a href='{{ url_for('deal_detail', deal_id=deal.id) }}'>{{ deal.product.name }}</a><br>${{ deal.price }}");
       {% endfor %}
+
+      const marker = L.AwesomeMarkers.icon({
+          icon: 'user',
+          markerColor: 'red',
+          prefix: 'fa'
+        });
+ 
+      // Current user marker
+      L.marker([{{ current_user.latitude }}, {{ current_user.longitude }}], { icon: marker })
+        .addTo(map)
+        .bindPopup("You are here");
     });
   </script>
 </section>

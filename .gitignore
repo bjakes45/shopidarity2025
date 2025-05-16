@@ -5,6 +5,7 @@ __pycache__/
 
 # Environment
 .env
+possible-haven-459822-j7-2fb7e58a341a.json
 
 # Database
 instance/*.db

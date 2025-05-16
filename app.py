@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-from models import db, User, Product, Rating, Favorite, Comment, ProductStatus, Deal
+from models import db, User, Product, Rating, Favorite, Comment, ProductStatus, Deal, APIUsage
 from functools import wraps
 from datetime import datetime, timedelta
 import geopy, json, os, random, csv, requests
@@ -16,11 +16,13 @@ from flask_wtf import CSRFProtect
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 import requests.exceptions
+from google.cloud import translate_v2 as translate
+from langdetect import detect
+
+
 
 
 from helpers import (
-    is_rate_limited,
-    increment_ip_count,
     login_required_with_redirect_back,
     get_user_favorites,
     get_user_ratings,
@@ -32,13 +34,14 @@ from helpers import (
     seed_plus,
     seed_users_with_interactions,
     seed_deals,
-    submissions_by_ip,
-    ip_timestamps,
-    get_paginated
+    get_client_ip,
+    enforce_rate_limit,
+    get_paginated,
+    faker
 )
 
-faker = Faker()
 load_dotenv()
+
 
 #APP CONTEXT
 API_USAGE = {
@@ -65,6 +68,7 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+translate_client = translate.Client()
 
 
 # Initialize Login
@@ -72,6 +76,12 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'  # name of your login route
 
+def not_in_english(text):
+    try:
+        lang = detect(text)
+        return lang != 'en', lang
+    except:
+        return False, 'unknown'
 
 @app.before_request
 def initialize_database():
@@ -84,9 +94,23 @@ def initialize_database():
     plu_count = Product.query.filter(db.func.length(Product.upc) == 4).count()
     if plu_count == 0:
         seed_plus()
-  
-    #if User.query.count() <= 1:
-    #  seed_users_with_interactions()
+    
+    if User.query.filter_by(email=os.getenv("ADMIN_EMAIL")).first() is None:
+      user = User(
+        username=os.getenv("ADMIN_USERNAME"),
+        email=os.getenv("ADMIN_EMAIL"),
+        password=generate_password_hash(os.getenv("ADMIN_PASSWORD")),
+        city=os.getenv("ADMIN_CITY"),
+        country=os.getenv("ADMIN_COUNTRY"),
+        admin=True,
+        latitude=float(os.getenv("ADMIN_LAT")),
+        longitude=float(os.getenv("ADMIN_LON"))
+      )
+      db.session.add(user)
+      db.session.commit()
+
+    if User.query.count() <= 1:
+      seed_users_with_interactions()
 
     if Deal.query.count() <= 100:
       seed_deals()
@@ -256,11 +280,11 @@ def product_comments(upc):
 #NEW PRODUCT
 @app.route('/products/new', methods=['GET', 'POST'])
 def new_product():
-    ip_address = request.remote_addr
-    if not is_rate_limited(ip_address):
-        increment_ip_count(ip_address)
-        flash(f"IP Limit: {len(ip_timestamps(ip_address))} / 5 per day")
-    
+
+    rate_limit_response = enforce_rate_limit()
+    if rate_limit_response:
+        return redirect(url_for('scan'))
+
     is_logged_in = current_user.is_authenticated
 
     upc = request.args.get('upc', '')  # Retrieve UPC query
@@ -290,8 +314,8 @@ def new_product():
             trimmed = [parts[0]] + parts[-(max_items - 1):]
             return ', '.join(trimmed)
         
-    if len(category) > 128:
-        category = trim_category_string(category)
+        if len(category) > 128:
+            category = trim_category_string(category)
         if len(category) > 128:
             category = category[:125] + '...'
         
@@ -359,6 +383,12 @@ def new_product():
         return redirect(url_for('product_detail', upc=upc))
 
     return render_template('products/new_product.html', upc=upc)
+
+#DEAL DETAIL
+@app.route("/deal/<int:deal_id>")
+def deal_detail(deal_id):
+    deal = Deal.query.get_or_404(deal_id)
+    return render_template("deals/deal_detail.html", deal=deal)
 
 #USER DASHBOARD
 @app.route('/dashboard/')
@@ -460,7 +490,7 @@ def discover():
     if tab == 'deals':
         nearby_users = current_user.nearby_users(radius_km=40)
         nearby_deals = current_user.nearby_deals(radius_km=40)
-        nearby_deals, pages, total_pages, total_display = get_paginated(nearby_deals, page, per_page=24)
+        nearby_deals, pages, total_pages, total_display = get_paginated(nearby_deals, page, per_page=75)
 
     def url_builder(p):
         return url_for('discover', tab=tab, page=p)
@@ -562,6 +592,28 @@ def lookup_upc(upc):
             })
 
     return jsonify({"error": "Product not found"}), 404
+#CHECK LANGUAGE
+@app.route('/api/check_language', methods=['POST'])
+def api_check_language():
+    text = request.json.get('text', '')
+    if not text:
+        return jsonify({'error': 'Missing text'}), 400
+
+    result = not_in_english(text)
+    return jsonify({'not_in_english': result})
+
+#TRANSLATION
+@app.route('/api/translate', methods=['POST'])
+def translate_text():
+    data = request.get_json()
+    text = data.get('text', '')
+
+    translated = translate_client.translate(text, target_language='en')
+    return jsonify({
+        'original': text,
+        'translated': translated['translatedText'],
+        'detected_language': translated['detectedSourceLanguage']
+    })
 
 #SCRAPE DEAL
 @app.route('/scrape_deal', methods=['POST'])
@@ -593,8 +645,6 @@ def scrape_deal():
     except Exception as e:
         return jsonify({'success': False, 'error': f'Scraping failed: {str(e)}'})
 
-    
-
 #USER HANDLING
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -623,8 +673,38 @@ def register():
         return redirect(url_for('products'))
     return render_template('user_admin/register.html')
 
+@app.route('/dashboard/new_user', methods=['GET', 'POST'])
+@login_required
+def dashboard_new_user():
+    if not current_user.admin:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        is_admin = 'admin' in request.form
+
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash('Username already exists.', 'error')
+        else:
+            user = User(
+                username=username,
+                email=email,
+                password_hash=generate_password_hash(password),
+                admin=is_admin
+            )
+            db.session.add(user)
+            db.session.commit()
+            flash(f'User {username} created successfully.', 'success')
+            return redirect(url_for('dashboard_new_user'))
+
+    return render_template('dashboard/new_user.html')
+
 # Whitelist of supported cities
-SUPPORTED_CITIES = {'New York', 'Vancouver'}
+#SUPPORTED_CITIES = {('Vancouver','Canada')}
+SUPPORTED_CITIES = {}
 
 @app.route('/check-location')
 def check_location():
@@ -635,19 +715,22 @@ def check_location():
         location = geolocator.reverse(f"{lat}, {lon}", language='en')
         address = location.raw.get('address', {})
         city = (address.get('city') or address.get('town') or address.get('village') or '').strip().title()
+        country = (address.get('country') or '').strip().title()
 
-        allowed = city in SUPPORTED_CITIES
+        allowed = (city, country) in SUPPORTED_CITIES
 
         return jsonify({
             "allowed": allowed,
             "city": city,
-            "user_count": User.query.filter_by(city=city).count()      # placeholder until we track cities on users
+            "country": country,
+            "user_count": User.query.filter_by(city=city, country=country).count()      # placeholder until we track cities on users
         })
     except Exception as e:
         return jsonify({
             "allowed": False,
             "city": "",
-            "user_count": User.query.filter_by(city=city).count(),
+            "country": "",
+            "user_count": User.query.filter_by(city=city, country=country).count(),
             "error": str(e)
         })
 
@@ -702,6 +785,19 @@ def unfavorite(upc):
     Favorite.query.filter_by(user_id=current_user.id, product_upc=upc).delete()
     db.session.commit()
     return redirect(request.referrer or url_for('index'))
+
+@app.route('/cart_detail/<cart_id>', methods=['POST'])
+@login_required
+def cart_detail(cart_id):
+    return render_template('carts/create_cart.html')
+
+@app.route('/create_cart/<deal_id>', methods=['GET','POST'])
+@login_required
+def create_cart(deal_id):
+    flash("Coming Soon!!")
+    return redirect(request.referrer or url_for('index'))
+    #return render_template('carts/create_cart.html')
+
 
 
 if __name__ == '__main__':

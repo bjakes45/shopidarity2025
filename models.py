@@ -17,6 +17,7 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
+    admin = db.Column(db.Boolean, default=False)
     
     #GEODATA
     city = db.Column(db.String(100))
@@ -27,6 +28,7 @@ class User(db.Model, UserMixin):
     #SCHEMA RELATIONSHIPS
     favorites = db.relationship('Favorite', back_populates='user', cascade='all, delete-orphan')
     ratings = db.relationship('Rating', back_populates='user', cascade='all, delete-orphan')
+    deals = db.relationship('Deal', back_populates='user')
     
     #METHODS
     def shared_favorites(self, other_user):
@@ -184,6 +186,7 @@ class Deal(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     receipt_id = db.Column(db.Integer, db.ForeignKey('receipt.id'), nullable=True)
 
+    user = db.relationship('User', back_populates='deals')
     product = db.relationship('Product', back_populates='deals')
     collective_carts = db.relationship('CollectiveCart', back_populates='deal', cascade="all, delete-orphan")
 
@@ -215,6 +218,9 @@ class CollectiveCart(db.Model):
     def product(self):
         return self.deal.product if self.deal else None
 
+    def share_cost(self):
+        return self.total_cost / self.share_count
+
 class CartShare(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cart_id = db.Column(db.Integer, db.ForeignKey('collective_cart.id'), nullable=False)
@@ -225,5 +231,17 @@ class CartShare(db.Model):
     user = db.relationship('User', backref='cart_shares')
     cart = db.relationship('CollectiveCart', back_populates='shares')
 
+class APIUsage(db.Model):
+    __tablename__ = 'api_usage'
 
+    ip = db.Column(db.String(45), primary_key=True)  # IPv6-safe
+    count = db.Column(db.Integer, default=0)
+    remaining = db.Column(db.Integer, default=100)
+    reset_time = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(days=1))
+    reset_timestamp = db.Column(db.DateTime, nullable=True)
+
+    def reset(self):
+        self.count = 1
+        self.remaining = 10
+        self.reset_time = datetime.utcnow() + timedelta(days=1)
 

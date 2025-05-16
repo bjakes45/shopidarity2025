@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-8">
+
+  <!-- Title -->
+  <h1 class="text-3xl font-bold text-gray-900">
+    <a href="{{ url_for('product_detail', upc=deal.product.upc) }}">{{ deal.product.name }}</a> at {{ deal.store }}
+  </h1>
+
+  <!-- Grid: Details + Map -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+    <!-- Deal Details -->
+    <div class="space-y-4 text-gray-700">
+      <p><span class="font-semibold">Price:</span> ${{ "%.2f"|format(deal.price) }}</p>
+      <p><span class="font-semibold">Description:</span> {{ deal.product.description }}</p>
+      <p><span class="font-semibold">Category:</span> {{ deal.product.category }}</p>
+      <p><span class="font-semibold">Store:</span> {{ deal.store }}</p>
+      <p><span class="font-semibold">Address:</span> {{ deal.latitude, deal.longitude }}</p>
+      <p class="text-sm text-gray-500"><span class="font-semibold">Posted by:</span> {{ deal.user.email }}</p>
+    </div>
+
+    <!-- Map -->
+    <div class="rounded-lg overflow-hidden border border-gray-300">
+      <div id="dealMap" class="w-full h-64"></div>
+    </div>
+
+  </div>
+
+  <!-- Call to Action -->
+  <div class="text-center mt-10">
+    <a href="{{ url_for('create_cart', deal_id=deal.id)}}" 
+       class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-semibold px-8 py-4 rounded-xl shadow-lg transition duration-200">
+      🛒 Host a Collective Cart
+    </a>
+    <p class="mt-2 text-gray-500 text-sm">
+      Coordinate with others to buy this deal together!
+    </p>
+  </div>
+
+</div>
+
+<!-- Leaflet JS + CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<!-- Leaflet Init -->
+<script>
+  const map = L.map('dealMap').setView([{{ deal.latitude }}, {{ deal.longitude }}], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+  L.marker([{{ deal.latitude }}, {{ deal.longitude }}])
+    .addTo(map)
+    .bindPopup('{{ deal.store }}')
+    .openPopup();
+</script>
+{% endblock %}

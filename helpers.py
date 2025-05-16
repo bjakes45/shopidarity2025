@@ -5,39 +5,46 @@ import math
 from collections import defaultdict
 from functools import wraps
 from datetime import datetime, timedelta
-from flask import flash, redirect, request
+from flask import flash, redirect, request, jsonify
 from flask_login import current_user
 from werkzeug.security import generate_password_hash
 from faker import Faker
 from math import ceil
 
-from models import db, Product, Favorite, Rating, Deal, User  # adjust paths if needed
+from models import db, Product, Favorite, Rating, Deal, User, APIUsage  # adjust paths if needed
 
 faker = Faker()
 
-submissions_by_ip = {}  # make this global to track IPs
+def get_client_ip():
+    return request.headers.get('X-Forwarded-For', request.remote_addr)
 
-
-def is_rate_limited(ip):
-    timestamps = ip_timestamps(ip)
-
-    if len(timestamps) >= 5:
-        return True
-    # Not updating timestamps yet — only after success
-    submissions_by_ip[ip] = timestamps
-    return False
-
-def increment_ip_count(ip):
+def enforce_rate_limit():
+    ip = get_client_ip()
+    usage = APIUsage.query.get(ip)
     now = datetime.utcnow()
-    submissions_by_ip.setdefault(ip, []).append(now)
 
-def ip_timestamps(ip):
-	now = datetime.utcnow()
-	window_start = now - timedelta(days=1)
-	timestamps = submissions_by_ip.get(ip, [])
-	timestamps = [ts for ts in timestamps if ts > window_start]
+    if usage:
+        if now > usage.reset_time:
+            usage.reset()
+        elif usage.remaining <= 0:        	
+            flash("You have hit your Product entry limit until tomorrow", "error")
+            return jsonify({"error": "Rate limit exceeded"}), 429
+        else:
+            usage.count += 1
+            usage.remaining -= 1
+            flash("IP:" + str(usage.ip) + "-" + str(usage.remaining) + "Lookups Remaining")
+    else:
+        usage = APIUsage(
+            ip=ip,
+            count=1,
+            remaining=5,
+            reset_time=now + timedelta(days=1)
+        )
+        db.session.add(usage)
+        flash("First use by IP:" + str(usage.ip))
 
-	return timestamps
+    db.session.commit()
+    return None  # No error
 
 def login_required_with_redirect_back(func):
     @wraps(func)
@@ -245,7 +252,7 @@ def seed_plus(i=2000):
 def seed_users_with_interactions(user_count=100, interactions_per_user=100):
     products = Product.query.all()
     product_ids = [p.upc for p in products]
-    
+      
     count = 0
     for i in range(user_count):
         lat, lng = random_point_near_vancouver()    

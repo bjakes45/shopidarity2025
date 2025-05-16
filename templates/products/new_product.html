@@ -143,13 +143,82 @@
       nutrimentDiv.innerHTML = '';
     }
   }
-
-   document.addEventListener("DOMContentLoaded", function () {
-    const upc = "{{ upc }}";
-    if (upc) {
-      lookupUPC(upc);
-    }
+async function isNotInEnglish(text, csrfToken) {
+  const res = await fetch('/api/check_language', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    },
+    body: JSON.stringify({ text })
   });
+
+  if (!res.ok) {
+    console.warn("Language detection failed");
+    return false;
+  }
+
+  const data = await res.json();
+  return data.not_in_english;
+}
+
+async function translateText(field, text, csrfToken) {
+  const res = await fetch('/api/translate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    },
+    body: JSON.stringify({ field, text })
+  });
+
+  if (!res.ok) {
+    console.warn("Translation request failed");
+    return text;
+  }
+
+  const data = await res.json();
+  return data.translated || text;
+}
+
+async function translateFieldsIfNeeded(csrfToken) {
+  const nameInput = document.querySelector('input[name="name"]');
+  const brandInput = document.querySelector('input[name="brand"]');
+  const catInput = document.querySelector('input[name="category"]');
+  const descTextarea = document.querySelector('textarea[name="description"]');
+
+  const fields = [
+    { el: nameInput, name: "name" },
+    { el: brandInput, name: "brand" },
+    { el: catInput, name: "category" },
+    { el: descTextarea, name: "description" }
+  ];
+
+  for (const { el, name } of fields) {
+    const original = el.value.trim();
+    if (!original) continue;
+
+    const needsTranslation = await isNotInEnglish(original, csrfToken);
+    if (needsTranslation[0]) {
+      el.dataset.original = original;
+      el.value = "Translating...";
+      const translated = await translateText(name, original, csrfToken);
+      el.value = translated;
+    }
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const upc = "{{ upc }}";
+  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+  if (upc) {
+    lookupUPC(upc).then(() => {
+      translateFieldsIfNeeded(csrfToken);
+    });
+  }
+});
+
 </script>
 
 {% endblock %}

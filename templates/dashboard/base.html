@@ -12,8 +12,12 @@
       <a href= "{{ url_for('dashboard_comments') }}" class="block text-blue-600 hover:underline">My Comments</a>
 
       </br>
-      <h2>Admin</h2>
-      <a href= "{{ url_for('dashboard_suggestions') }}" class="block text-blue-600 hover:underline">Approve Products</a>
+      {% if current_user.is_authenticated and current_user.admin %}
+        <h2>Admin</h2>
+        <a href="{{ url_for('dashboard_suggestions') }}" class="block text-blue-600 hover:underline">Approve Products</a>
+        <a href="{{ url_for('dashboard_new_user') }}" class="block text-blue-600 hover:underline">Create Users</a>
+      {% endif %}
+
     </nav>
   </aside>
 
