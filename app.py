@@ -53,6 +53,7 @@ API_USAGE = {
 
 #Init server and database connection
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 app.secret_key = os.getenv("SECRET_KEY")
 csrf = CSRFProtect(app)
 if os.environ.get('RENDER'):
@@ -68,7 +69,6 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 translate_client = translate.Client()
 
 
@@ -110,8 +110,8 @@ def initialize_database():
       db.session.add(user)
       db.session.commit()
 
-    if User.query.count() <= 1:
-      seed_users_with_interactions()
+    #if User.query.count() <= 1:
+     # seed_users_with_interactions()
 
     if Deal.query.count() <= 100:
       seed_deals()
