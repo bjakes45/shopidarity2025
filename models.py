@@ -116,6 +116,8 @@ class Product(db.Model):
     image_url = db.Column(db.String(512), nullable=True)
     nutriments = db.Column(db.JSON, nullable=True)
 
+    origin = db.Column(db.String(128), nullable=True)
+    verified_by = db.Column(db.String(128), nullable=True)
     status = db.Column(SQLEnum(ProductStatus), default=ProductStatus.SUGGESTED, nullable=False)
 
     # NEW FIELDS

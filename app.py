@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, Response
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import db, User, Product, Rating, Favorite, Comment, ProductStatus, Deal, APIUsage
@@ -18,8 +18,8 @@ from urllib.parse import urlparse
 import requests.exceptions
 from google.cloud import translate_v2 as translate
 from langdetect import detect
-
-
+from io import StringIO
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 from helpers import (
@@ -68,6 +68,7 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 translate_client = translate.Client()
 
 
@@ -109,8 +110,8 @@ def initialize_database():
       db.session.add(user)
       db.session.commit()
 
-    #if User.query.count() <= 1:
-    #  seed_users_with_interactions()
+    if User.query.count() <= 1:
+      seed_users_with_interactions()
 
     if Deal.query.count() <= 100:
       seed_deals()
@@ -216,58 +217,6 @@ def product_deals(upc):
 
     return render_template('products/product_deals.html', product=product)
 
-#PRODUCT NEW DEAL
-
-@app.route("/product/<string:upc>/new_deal", methods=["GET", "POST"])
-def product_new_deal(upc):
-    product = Product.query.get_or_404(upc)
-
-    if not current_user.is_authenticated:
-        flash('Login Required')
-        return redirect(request.referrer or url_for('index'))
-
-    if request.method == "POST":
-        store = request.form.get("store")
-        if not store:
-          store = request.form.get("store-input")
-          flash(store)
-        price_str = request.form.get("price")
-        price = float(re.sub(r'[^\d.]', '', price_str)) if price_str else None
-        url = request.form.get("url")
-        user_id = current_user.id if current_user.is_authenticated else None
-        lat = request.form.get("location-lat")
-        lng = request.form.get("location-lng")
-        if not lat or not lng:
-          lat, lng = current_user.latitude, current_user.longitude
-
-        if store and price:
-            try:
-                new_deal = Deal(
-                    product_id=product.upc,
-                    store=store,
-                    price=float(price),
-                    url=url or None,
-                    latitude=lat,
-                    longitude=lng,
-                    user_id=user_id,
-                    source="user",
-                )
-                db.session.add(new_deal)
-                db.session.commit()
-                flash("Thanks! Your deal was added.", "success")
-                return redirect(url_for("product_detail", upc=product.upc))
-            except Exception as e:
-                flash(f"Error submitting deal: {e}", "danger")
-
-    deals = product.deals
-    return render_template("products/product_new_deal.html",
-      upc=upc, 
-      product=product,
-      GOOGLE_API_KEY=os.environ.get('GOOGLE_API_KEY'),
-      user_lat=current_user.latitude if current_user.is_authenticated else 49.2350654,
-      user_lng=current_user.longitude if current_user.is_authenticated else -123.025867
-    )
-
 #PRODUCT COMMENTS
 @app.route('/products/<string:upc>/comments')
 def product_comments(upc):
@@ -304,7 +253,9 @@ def new_product():
     if request.method == 'POST':
         name = request.form['name']
         brand = request.form['brand']
+        description = request.form['description']
         image_url = request.form['image_url']
+        verified_by = request.form['verified_by']
         
         category = request.form['category']
         
@@ -360,9 +311,12 @@ def new_product():
             name=name,
             category=category,
             brand=brand,
+            description=description,
             image_url=image_url,
             nutriments=nutriments,
             status=status,
+            origin='user',
+            verified_by=verified_by,
             suggested_by_ip=ip_address,
             user_id=user_id
         )
@@ -394,6 +348,57 @@ def new_product():
 def deal_detail(deal_id):
     deal = Deal.query.get_or_404(deal_id)
     return render_template("deals/deal_detail.html", deal=deal)
+
+#PRODUCT NEW DEAL
+@app.route("/product/<string:upc>/new_deal", methods=["GET", "POST"])
+def product_new_deal(upc):
+    product = Product.query.get_or_404(upc)
+
+    if not current_user.is_authenticated:
+        flash('Login Required')
+        return redirect(request.referrer or url_for('index'))
+
+    if request.method == "POST":
+        store = request.form.get("store")
+        if not store:
+          store = request.form.get("store-input")
+          flash(store)
+        price_str = request.form.get("price")
+        price = float(re.sub(r'[^\d.]', '', price_str)) if price_str else None
+        url = request.form.get("url")
+        user_id = current_user.id if current_user.is_authenticated else None
+        lat = request.form.get("location-lat")
+        lng = request.form.get("location-lng")
+        if not lat or not lng:
+          lat, lng = current_user.latitude, current_user.longitude
+
+        if store and price:
+            try:
+                new_deal = Deal(
+                    product_id=product.upc,
+                    store=store,
+                    price=float(price),
+                    url=url or None,
+                    latitude=lat,
+                    longitude=lng,
+                    user_id=user_id,
+                    source="user",
+                )
+                db.session.add(new_deal)
+                db.session.commit()
+                flash("Thanks! Your deal was added.", "success")
+                return redirect(url_for("product_detail", upc=product.upc))
+            except Exception as e:
+                flash(f"Error submitting deal: {e}", "danger")
+
+    deals = product.deals
+    return render_template("products/product_new_deal.html",
+      upc=upc, 
+      product=product,
+      GOOGLE_API_KEY=os.environ.get('GOOGLE_API_KEY'),
+      user_lat=current_user.latitude if current_user.is_authenticated else 49.2350654,
+      user_lng=current_user.longitude if current_user.is_authenticated else -123.025867
+    )
 
 #USER DASHBOARD
 @app.route('/dashboard/')
@@ -825,6 +830,45 @@ def create_cart(deal_id):
 @app.route("/faq")
 def faq():
     return render_template("faq.html")
+
+
+@app.route('/download_user_products')
+def download_user_products():
+    products = Product.query.filter_by(origin='user').all()
+
+    si = StringIO()
+    writer = csv.writer(si)
+
+    # Write header
+    writer.writerow([
+        'UPC', 'Name', 'Category', 'Brand', 'Description', 'Image URL',
+        'Nutriments', 'Origin', 'Verified By', 'Status', 'User ID'
+    ])
+
+    for p in products:
+        writer.writerow([
+            p.upc,
+            p.name,
+            p.category,
+            p.brand,
+            p.description,
+            p.image_url,
+            str(p.nutriments) if p.nutriments else '',
+            p.origin,
+            p.verified_by,
+            p.status.name if p.status else '',
+            p.user_id
+        ])
+
+    output = si.getvalue()
+    return Response(
+        output,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment;filename=user_products.csv'}
+    )
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

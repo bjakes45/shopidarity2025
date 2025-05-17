@@ -16,7 +16,7 @@ from models import db, Product, Favorite, Rating, Deal, User, APIUsage  # adjust
 faker = Faker()
 
 def get_client_ip():
-    return request.headers.get('X-Forwarded-For', request.remote_addr)
+    return request.remote_addr
 
 def enforce_rate_limit():
     ip = get_client_ip()
@@ -238,7 +238,7 @@ def seed_plus(i=2000):
 
             # Avoid duplicates
             if Product.query.filter_by(upc=upc).first() is None:
-                product = Product(upc=upc, name=name, category=category, image_url=image_url, status="APPROVED")
+                product = Product(upc=upc, name=name, category=category, image_url=image_url, status="APPROVED", origin='root')
                 db.session.add(product)
                 count += 1
 

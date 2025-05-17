@@ -13,6 +13,7 @@
     <input name="image_url" placeholder="Image-url" type="hidden" class="input" />
     <input name="nutriments" placeholder="Nutrifacts" type="hidden" class="input" />
     <input name="offers" placeholder="Offers" type="hidden" class="input" />
+    <input name="verified_by" placeholder="Verified_by" type="hidden" class="input" />
     <textarea name="description" placeholder="Description" class="input"></textarea>
     <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Submit</button>
   </form>
@@ -105,6 +106,7 @@
         document.querySelector('input[name="image_url"]').value = data.data.image_url || '';
         document.querySelector('input[name="nutriments"]').value = JSON.stringify(data.data.nutriments || {});
         document.querySelector('input[name="offers"]').value = JSON.stringify(data.data.offers || {});
+        document.querySelector('input[name="verified_by"]').value = data.source || '';
 
         preInfo.classList.remove("hidden");
         

@@ -23,15 +23,59 @@
         </details>
 
         <details class="bg-white p-4 rounded-xl shadow-sm group">
+          <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+            🧑‍🤝‍🧑 Who is Shopidarity for?
+          </summary>
+          <div class="mt-4 text-gray-700">
+            <p class="mb-4">Shopidarity is designed for everyday people who want to align their spending with their values while saving money. Here are just a few types of users who benefit from Shopidarity:</p>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border border-gray-200 rounded-lg">
+        <thead class="bg-gray-100 text-gray-800">
+          <tr>
+            <th class="px-4 py-2 font-semibold">Who</th>
+            <th class="px-4 py-2 font-semibold">What They’re Looking For</th>
+            <th class="px-4 py-2 font-semibold">How Shopidarity Helps</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <tr>
+            <td class="px-4 py-3">🧾 Budget-Conscious Shoppers</td>
+            <td class="px-4 py-3">Ways to save money on everyday purchases</td>
+            <td class="px-4 py-3">Join collective carts and share deals to unlock group discounts</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3">🌱 Ethical Consumers</td>
+            <td class="px-4 py-3">Support brands that match their values</td>
+            <td class="px-4 py-3">Favorite ethical products and discover value-aligned product groups</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3">📦 Local Coordinators</td>
+            <td class="px-4 py-3">Ways to organize community buying or pickups</td>
+            <td class="px-4 py-3">Use product groups to find neighbors and collaborate on purchases</td>
+          </tr>
+          <tr>
+            <td class="px-4 py-3">🎯 Deal Sharers</td>
+            <td class="px-4 py-3">Enjoy curating and sharing discounts with others</td>
+            <td class="px-4 py-3">Contribute to product groups by posting timely deals</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+        </details>
+
+
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
             <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
                 🔁 How does it work?
             </summary>
             <div class="mt-2 text-gray-700">
                 <ol class="list-decimal ml-5 space-y-1">
-                    <li>Scan a barcode</li>
-                    <li>Add a new product (if not found)</li>
+                    <li>Scan a barcode - Add a new product if it isn't already in our library</li>
+                    <li>Rate, favorite and comment on the products you buy everyday.</li>
                     <li>Add a deal – via link, receipt, API, or manually</li>
-                    <li>Host or join a collective cart to bulk buy together</li>
+                    <li>Find like-minded shoppers and form product groups</li>
+                    <li>Host or join a Collective Cart to bulk buy together</li>
                 </ol>
             </div>
         </details>
@@ -41,6 +85,9 @@
                 🧾 How do I add a deal?
             </summary>
             <div class="mt-2 text-gray-700">
+                <div class="mb-2">
+                  Deals let people know <strong>WHERE</strong> to find the products they like and <strong>HOW MUCH</strong> they cost.
+                </div>
                 <span class="font-bold">You will be able to submit a deal in four ways:</span>
                 <ul class="list-disc ml-5 space-y-1">
                     <li>Enter it manually (current)</li>
@@ -53,7 +100,7 @@
 
         <details class="bg-white p-4 rounded-xl shadow-sm group">
             <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
-                🛒 What is a collective cart?
+                🛒 What is a Collective Cart?
             </summary>
             <div class="mt-2 text-gray-700">
                 A group order where people buy together to save money. Hosts set a quantity goal and invite others. Once the goal is reached, one big order is placed.
@@ -65,9 +112,19 @@
                 📍 What are product groups?
             </summary>
             <div class="mt-2 text-gray-700">
-                Join a local group focused on a specific product. Like like a fan club, but for your favorite products. Get alerts for deals and collective carts in your area, and coordinate pickups together.
+                Join a local group focused on a specific product. Like like a fan club, but for your favorite products. Get alerts for deals and Collective Carts in your area, and coordinate pickups together.
             </div>
         </details>
+
+        <details class="bg-white p-4 rounded-xl shadow-sm group">
+          <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+            🌀 Is this a relaunch?
+          </summary>
+          <div class="mt-2 text-gray-700">
+            Yes! Shopidarity began over a decade ago as an idea ahead of its time. Back then, the tools and user behaviors needed for collective shopping weren’t quite in place. Our team spent that time learning about community organizing and mutual aid best practices. This relaunch brings the concept into today’s contex. We are combining barcode scanning, social shopping habits, and a renewed interest in community-powered savings. The spirit is the same: use shared purchasing power to reward ethical brands and save money together.
+          </div>
+        </details>
+
 
         <details class="bg-white p-4 rounded-xl shadow-sm group">
             <summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
@@ -86,7 +143,7 @@
                 <ul class="list-disc ml-5 space-y-1">
                     <li>Auto alerts for tracked products</li>
                     <li>Trust scores for cart hosts and deal contributors</li>
-                    <li>Delivery coordination tools for collective carts</li>
+                    <li>Delivery coordination tools for Collective Carts</li>
                 </ul>
             </div>
         </details>
@@ -105,7 +162,7 @@
         <div class="border-t pt-6 mt-10">
           <h2 class="text-xl font-semibold text-gray-800">Still have questions?</h2>
           <p class="mt-2 text-gray-600">
-            Want to get involved, ask more questions, or start a cart in your community? <br>
+            Want to get involved, ask more questions, or be the first to host a Collective Cart in your community? <br>
               <a href="{{ url_for('home') }}#join" class="text-blue-600 hover:underline font-medium">
                 Learn more and join us here.
               </a>

@@ -1,28 +1,52 @@
 {% extends "dashboard/base.html" %}
 {% block title %}Review Product Suggestions{% endblock %}
 {% block dashboard %}
-	<div class="max-w-3xl mx-auto p-6">
-	  <h1 class="text-2xl font-bold mb-4">Review Product Suggestions</h1>
-	  {% for product in products %}
-	    <div class="border p-4 mb-4 rounded shadow">
-	      <a href="{{ url_for('product_detail', upc=product.upc) }}"><h2 class="font-semibold text-lg">{{ product.name }}</h2></a>
-	      <p><strong>UPC:</strong> {{ product.upc }}</p>
-	      <p><strong>Brand:</strong> {{ product.brand }}</p>
-	      <p><strong>Category:</strong> {{ product.category }}</p>
-	      <p><strong>Description:</strong> {{ product.description }}</p>
-	      <form method="POST" action="{{ url_for('approve_suggestion', product_upc=product.upc) }}" class="inline">
-            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
-	        <button class="bg-green-600 text-white px-4 py-1 rounded" type="submit">Approve</button>
-	      </form>
-	      <form method="POST" action="{{ url_for('reject_suggestion', product_upc=product.upc) }}" class="inline ml-2">
-            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
-	        <button class="bg-red-600 text-white px-4 py-1 rounded" type="submit">Reject</button>
 
-	      </form>
-	    </div>
-	  {% else %}
-	    <p>No suggestions pending approval.</p>
-	  {% endfor %}
-	  <p>API Calls Today:{{ api_calls }}</p>
-	</div>
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Review Product Suggestions</h1>
+  <a href="{{ url_for('download_user_products') }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors duration-200">
+    ⬇️ Download CSV
+  </a>
+</div>
+
+  {% if products %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for product in products %}
+    <div class="border border-gray-300 bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow text-center">
+      <a href="{{ url_for('product_detail', upc=product.upc) }}">
+        <h2 class="text-lg font-bold text-blue-700 hover:underline">{{ product.name }}</h2>
+      </a>
+      <p class="text-sm text-gray-700"><span class="font-semibold">UPC:</span> {{ product.upc }}</p>
+      <p class="text-sm text-gray-700"><span class="font-semibold">Brand:</span> {{ product.brand }}</p>
+      <p class="text-sm text-gray-700"><span class="font-semibold">Category:</span> {{ product.category }}</p>
+      <p class="text-sm text-gray-700"><span class="font-semibold">Description:</span> {{ product.description }}</p>
+      <p class="text-sm text-gray-700"><span class="font-semibold">Verification:</span> {{ product.verified_by }}</p>
+
+      <div class="mt-4 flex justify-center space-x-3">
+        <form method="POST" action="{{ url_for('approve_suggestion', product_upc=product.upc) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors duration-200" type="submit">
+            ✅ Approve
+          </button>
+        </form>
+        <form method="POST" action="{{ url_for('reject_suggestion', product_upc=product.upc) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm transition-colors duration-200" type="submit">
+            ❌ Reject
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-8 text-gray-500">
+    <p class="text-lg">No suggestions pending approval.</p>
+  </div>
+  {% endif %}
+
+  <div class="mt-6 text-center text-sm text-gray-500">
+    API Calls Today: {{ api_calls }}
+  </div>
+</div>
 {% endblock %}
