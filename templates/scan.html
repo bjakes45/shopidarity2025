@@ -15,7 +15,7 @@
         <!-- Waiting for scan text and Scan Again button -->
         <div class="flex flex-col items-center justify-center mt-4 space-y-3 sm:flex-row sm:space-y-0 sm:space-x-4">
           <div id="result" class="mt-4 text-center text-lg font-medium">Waiting for scan...</div>
-          <a href="#" id="scan-again" class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 inline-block">Scan Again</a>
+          <a href="#" id="scan-again" class="cta-button bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-700 inline-block" style="display:none;">Scan Again</a>
         </div>
 
         <div id="detected-upc" class="mt-4">
@@ -49,9 +49,13 @@
     </div>
   </div>
 
-  <!-- QuaggaJS -->
+  <!-- QuaggaJS (desktop) -->
   <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
+  <!-- html5-qrcode (mobile) -->
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+
   <script>
+    // Elements
     const upcInput = document.getElementById('upc-input');
     const resultEl = document.getElementById('result');
     const scanAgainBtn = document.getElementById('scan-again');
@@ -63,7 +67,14 @@
     const addProductPrompt = document.getElementById('add-product-prompt');
     const addProductVerify = document.getElementById('add-product-verify');
     const refreshBtn = document.getElementById('refresh-code');
+    const scannerEl = document.getElementById('scanner');
 
+    // Utility: simple mobile device detection
+    function isMobileDevice() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // Validate UPC/PLU codes (same as your regex)
     const validateUPC = code => /^(?:\d{4}|9\d{4}|\d{12,13})$/.test(code);
 
     function handleUPCSearch(code) {
@@ -112,15 +123,17 @@
         });
     }
 
-    function startScanner() {
+    // Quagga scanner for desktop
+    function startQuaggaScanner() {
       resultEl.textContent = "Waiting for scan...";
-      scanAgainBtn.classList.add('hidden');
+      scanAgainBtn.style.display = "none";
+      scannerEl.innerHTML = ""; // clear
 
       Quagga.init({
         inputStream: {
           name: "Live",
           type: "LiveStream",
-          target: document.querySelector('#scanner'),
+          target: scannerEl,
           constraints: {
             facingMode: { ideal: "environment" },
             width: { min: 360, ideal: 640 },
@@ -144,36 +157,104 @@
         }
         Quagga.start();
       });
+
+      Quagga.onDetected(data => {
+        const code = data.codeResult.code;
+        upcInput.value = code;
+        handleUPCSearch(code);
+
+        setTimeout(() => {
+          Quagga.stop();
+          scannerEl.innerHTML = '';
+          scanAgainBtn.style.display = "inline-block";
+        }, 500);
+      });
     }
 
-    Quagga.onDetected(data => {
-      const code = data.codeResult.code;
-      upcInput.value = code;
-      handleUPCSearch(code);
-      
-      setTimeout(() => {
-        Quagga.stop();
-        document.querySelector('#scanner').innerHTML = '';
-        scanAgainBtn.style.display = "inline-block";  // <== Ensure this is still present
-      }, 500);
-    });
+    // html5-qrcode scanner for mobile
+    let html5QrcodeScanner;
+    function startHtml5QrcodeScanner() {
+      resultEl.textContent = "Waiting for scan...";
+      scanAgainBtn.style.display = "none";
+      scannerEl.innerHTML = ""; // clear
 
+      html5QrcodeScanner = new Html5Qrcode("scanner");
+
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: 250,
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.CODE_128
+          ]
+        },
+        qrCodeMessage => {
+          // barcode scanned successfully
+          upcInput.value = qrCodeMessage;
+          handleUPCSearch(qrCodeMessage);
+
+          // Stop scanning after detection
+          html5QrcodeScanner.stop().then(() => {
+            scanAgainBtn.style.display = "inline-block";
+          }).catch(err => {
+            console.error("Failed to stop html5-qrcode scanner:", err);
+          });
+        },
+        errorMessage => {
+          // handle scan failure or no detection (can ignore or log if needed)
+          // console.log("Scan error:", errorMessage);
+        }
+      ).catch(err => {
+        console.error("Error starting html5-qrcode scanner:", err);
+        resultEl.textContent = "Error starting scanner";
+      });
+    }
+
+    // Scan again button handler
     scanAgainBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      productDetailEl.classList.add('hidden');
-      productDetailEl.innerHTML = ''
-      addProductPrompt.classList.add('hidden');
-      addProductPrompt.innerHTML = ''
 
-      startScanner();
+      productDetailEl.classList.add('hidden');
+      productDetailEl.innerHTML = '';
+      addProductPrompt.classList.add('hidden');
+      addProductPrompt.innerHTML = '';
+      resultEl.textContent = "Waiting for scan...";
+      upcInput.value = "";
+
+      if (isMobileDevice()) {
+        if (html5QrcodeScanner) {
+          html5QrcodeScanner.stop().then(() => {
+            startHtml5QrcodeScanner();
+          }).catch(err => {
+            console.error("Failed to stop scanner on restart:", err);
+            startHtml5QrcodeScanner();
+          });
+        } else {
+          startHtml5QrcodeScanner();
+        }
+      } else {
+        Quagga.stop();
+        startQuaggaScanner();
+      }
     });
 
+    // Submit code button handler
     refreshBtn.addEventListener('click', (e) => {
       e.preventDefault();
       const updatedCode = upcInput.value.trim();
       if (updatedCode) handleUPCSearch(updatedCode);
     });
 
-    startScanner();
+    // Initialize scanner based on device
+    if (isMobileDevice()) {
+      startHtml5QrcodeScanner();
+    } else {
+      startQuaggaScanner();
+    }
   </script>
 {% endblock %}
