@@ -431,7 +431,12 @@ def dashboard_comments():
 @login_required
 def dashboard_suggestions():
     suggestions = Product.query.filter_by(status=ProductStatus.SUGGESTED).all()
-    return render_template("dashboard/suggestions.html", products=suggestions, api_calls=API_USAGE["reset_time"])
+    api_usage = APIUsage.query.all()
+
+    api_calls = 0
+    for use in api_usage:
+        api_calls += use.count
+    return render_template("dashboard/suggestions.html", products=suggestions, api_calls=api_calls)
 
 @app.route("/suggestion/approve/<product_upc>", methods=["POST"])
 @login_required
