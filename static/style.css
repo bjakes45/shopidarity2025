@@ -53,9 +53,11 @@ body {
 
 
 /* Video Styling */
-video {
-  width: 100%;
-  max-width: 600px;
+#scanner video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
 }
 
 /* Scanner Section */
