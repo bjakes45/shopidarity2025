@@ -172,10 +172,10 @@
 -->
 
 
-  <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+  <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
     {% if nearby_deals %}
       {% for deal in nearby_deals %}
-        <li class="bg-white border rounded-2xl shadow hover:shadow-md transition p-4 flex flex-col justify-between">
+        <li class="bg-white border rounded-2xl shadow hover:shadow-md transition m-3 p-4 flex flex-col justify-between">
           <a href="{{ url_for('deal_detail', deal_id=deal.id) }}" class="block">
             <h3 class="font-semibold text-lg truncate">{{ deal.product.name }}</h3>
             <p class="text-sm text-gray-600 mt-1">{{ deal.store }}</p>

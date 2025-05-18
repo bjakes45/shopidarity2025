@@ -1,7 +1,7 @@
-<!-- templates/dashboard.html -->
 {% extends "base.html" %}
 {% block content %}
-<div class="flex">
+<div class="flex h-screen overflow-hidden">
+
   <!-- Sidebar -->
   <aside class="w-40 sm:w-56 md:w-64 shrink-0 bg-gray-100 p-4 sm:p-6 min-h-screen overflow-y-auto text-sm sm:text-base">
     <h2 class="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">
@@ -23,8 +23,9 @@
   </aside>
 
   <!-- Main Content -->
-  <main class="flex-1 p-6 space-y-10 overflow-y-auto">
+  <main class="flex-1 overflow-y-auto lg:overflow-y-visible p-6 space-y-10">
     {% block dashboard %}{% endblock %}
   </main>
+
 </div>
 {% endblock %}

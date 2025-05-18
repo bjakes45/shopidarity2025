@@ -1,10 +1,10 @@
 {# _products.html #}
 {% macro render_products(products, current_user) %}
 
-      <ul class="grid sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <ul class="grid sm:grid-cols-3 md:grid-cols-4">
         {% for product in products %}
 
-          <li class="border p-4 rounded text-center bg-white shadow-sm">
+          <li class="border m-3 p-2 rounded text-center bg-white shadow-sm">
             <a href="{{ url_for('product_detail', upc=product.upc) }}" class="block text-md font-semibold mb-1">
               {%if product.name|length < 32 %}{{ product.name }}{% else%}{{ product.name[:29]}}...{% endif %}
             </a>
