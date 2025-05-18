@@ -2,16 +2,39 @@
 {% block title %}Product {{ product.upc }}{% endblock %}
 
 {% block content %}
+<!-- Toggle Button -->
+<button id="sidebarToggle" 
+  class="lg:hidden fixed top-20 left-4 z-30 bg-white border border-gray-300 shadow-md rounded-md p-2 hover:bg-gray-100 transition"
+  aria-label="Toggle sidebar menu"
+>
+  <!-- Hamburger Icon -->
+  <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" stroke-width="2"
+    viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path stroke-linecap="round" stroke-linejoin="round"
+      d="M4 6h16M4 12h16M4 18h16"></path>
+  </svg>
+</button>
+
+<!-- Overlay -->
+<div id="sidebarOverlay"
+  class="lg:hidden fixed top-20 inset-x-0 bottom-0 bg-black bg-opacity-40 z-20 hidden"
+></div>
+
 <div class="flex h-screen overflow-hidden">
 
   <!-- Sidebar -->
-  <aside class="w-40 sm:w-56 md:w-64 shrink-0 bg-gray-100 p-4 sm:p-6 overflow-y-auto text-sm sm:text-base">
-    <h2 class="text-lg sm:text-lg font-semibold mb-4 sm:mb-6 text-gray-800">
-      <a href="{{ url_for('product_detail', upc=product.upc) }}" class="text-blue-600 hover:underline">
-        {% if product.upc|length in [12,13]%}UPC:{% else %}PLU:{% endif %} {{ product.upc }}
-      </a>
-    </h2>
-    {% if current_user.is_authenticated and product.status.value == "approved"%}
+  <aside id="sidebar"
+    class="fixed lg:static top-20 left-0 h-[calc(100%-5rem)] w-64 bg-gray-100 p-4 sm:p-6 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out overflow-y-auto text-sm sm:text-base"
+    >
+    <a href="{{ url_for('product_detail', upc=product.upc) }}">
+      <h2 class="text-lg sm:text-lg font-semibold mb-2 sm:mb-6 text-gray-800 hover:text-blue-600 hover:underline">
+        {% if product.upc|length in [12,13] %}UPC:{% else %}PLU:{% endif %} {{ product.upc }}
+      </h2>
+      <p class="text-md sm:text-sm mb-2 text-gray-800 hover:text-blue-600 hover:underline">{{ product.name[:30] }}</p>
+    </a>
+
+
+    {% if current_user.is_authenticated and product.status.value == "approved" %}
     <!-- Centered Inline Actions -->
     <div class="flex flex-wrap justify-center items-center gap-2">
       <!-- Favorite / Unfavorite -->
@@ -64,11 +87,13 @@
         <h3 class="font-semibold">Average Rating:</h3>
         <p class="text-yellow-600 text-xl">{{ average_rating }}</p>
       </div>
-      <div>        
+      <div>
         <p class="text-gray-600 mt-4">Sign in to rate, comment, or favorite this product.</p>
       </div>
     </div>
     {% endif %}
+    
+    <hr class="my-4 border-gray-300">
 
     <nav class="flex flex-col gap-3">
       <a href="{{ url_for('product_comments', upc=product.upc) }}" class="text-gray-700 font-medium hover:text-blue-600 hover:underline">
@@ -86,21 +111,35 @@
       {% endif %}
 
       {% if current_user.is_authenticated and product.status.value == "approved" %}
-
       <a href="{{ url_for('product_new_deal', upc=product.upc) }}"
-      class="mt-4 inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition w-full justify-center text-sm">
-      <span class="text-lg leading-none">+</span>
-      Add New Deal
-    </a>
-    {% endif %}
-  </nav>
-</aside>
+        class="mt-4 inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition w-full justify-center text-sm">
+        <span class="text-lg leading-none">+</span>
+        Add New Deal
+      </a>
+      {% endif %}
+    </nav>
+  </aside>
 
-
-<!-- Main Content -->
-<main class="flex-1 overflow-y-auto lg:overflow-y-visible p-6 space-y-10">
-  {% block detail %}{% endblock %}
-</main>
+  <!-- Main Content -->
+  <main class="flex-1 overflow-y-auto lg:overflow-y-visible p-6 space-y-10">
+    {% block detail %}{% endblock %}
+  </main>
 
 </div>
+
+<script>
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+  sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('-translate-x-full');
+    sidebarOverlay.classList.toggle('hidden');
+  });
+
+  sidebarOverlay.addEventListener('click', () => {
+    sidebar.classList.add('-translate-x-full');
+    sidebarOverlay.classList.add('hidden');
+  });
+</script>
 {% endblock %}
