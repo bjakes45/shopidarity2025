@@ -65,7 +65,7 @@
         <a href="{{ url_for('dashboard') }}" class="underline">{{ current_user.username }}</a>
       </div>
       <!-- Logout inline -->
-      <a href="{{ url_for('logout') }}" class="bg-red-500 px-3 py-1 rounded hover:bg-red-600">Logout</a>
+      <a href="{{ url_for('logout') }}" class="bg-red-500 px-3 py-1 rounded hover:bg-red-600 hidden md:block">Logout</a>
       {% else %}
       <!-- Login button if not signed in -->
       <a href="{{ url_for('login') }}" class="bg-blue-500 px-3 py-1 rounded hover:bg-blue-600 hidden md:block">Login</a>
@@ -97,6 +97,8 @@
         Login
       </a>
     </div>
+      {% else %}
+      <a href="{{ url_for('logout') }}" class="inline-block bg-red-500 text-white text-center px-4 py-2 rounded-full hover:bg-red-600 transition duration-200 shadow-md">Logout</a>
   {% endif %}
 </div>
 

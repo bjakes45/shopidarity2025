@@ -42,6 +42,17 @@
       {{ render_products(pagination, current_user)}}
       {{ render_pagination(page, total_pages, url_builder) }}
 
+<!--
+    <div class="flex justify-between items-center pt-4">
+      {% if pagination.has_prev %}
+        <a href="{{ url_for('products', page=pagination.prev_num, query=query) }}" class="text-blue-600">← Prev</a>
+      {% endif %}
+      <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+      {% if pagination.has_next %}
+        <a href="{{ url_for('products', page=pagination.next_num, query=query) }}" class="text-blue-600">Next →</a>
+      {% endif %}
+    </div>
+-->
   <p class="text-sm text-gray-500">Total products in database: {{ db_total }}</p>
 </div>
 
