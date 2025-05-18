@@ -18,67 +18,6 @@
   </div>
 </div>
 
-{% if product.status.value == "approved" %}
-
-  {% if current_user.is_authenticated %}
-  <!-- Centered Inline Actions -->
-  <div class="flex flex-wrap justify-center items-center gap-2">
-    <!-- Favorite / Unfavorite -->
-    {% set is_favorite = current_user.favorites | selectattr('product', 'equalto', product) | list | length > 0 %}
-      {% if is_favorite %}
-  <!-- Show unfavorite button -->
-      <form method="post" action="{{ url_for('unfavorite', upc=product.upc) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="text-red-600 border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition text-sm">
-          ❤️ Remove Favorite
-        </button>
-      </form>
-      {% else %}
-  <!-- Show favorite button -->
-      <form method="post" action="{{ url_for('favorite', upc=product.upc) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="text-blue-600 border border-blue-600 px-3 py-1 rounded hover:bg-blue-50 transition text-sm">
-          ❤️ Favorite
-        </button>
-      </form>
-      {% endif %}
-
-    <!-- Rating Form -->
-    {% set user_rating = current_user.ratings | selectattr('product', 'equalto', product) | list | first %}
-<form action="{{ url_for('rate', upc=product.upc) }}" method="POST" class="inline flex items-center space-x-1">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input type="hidden" name="product_upc" value="{{ product.upc }}">
-  <label for="rating_{{ product.upc }}" class="text-xs">Rate:</label>
-  <select name="score" id="rating_{{ product.upc }}" class="text-xs border rounded px-1 py-0.5">
-    <option value="">--</option>
-    {% for i in range(1, 6) %}
-      <option value="{{ i }}" {% if user_rating and user_rating.score == i %}selected{% endif %}>{{ i }}</option>
-    {% endfor %}
-  </select>
-  <button type="submit" class="text-xs text-green-600 hover:underline">✔</button>
-</form>
-
-    <!-- Average Rating -->
-    <div class="text-center mt-1">
-      <h3 class="font-medium text-sm">Average Rating:</h3>
-      <p class="text-yellow-600 text-lg">
-        {% set avg = product.average_rating() %}
-        {{ "%.2f"|format(avg) if avg is not none else '–' }}
-      </p>
-    </div>
-  </div>
-  {% else %}
-      <div class="flex flex-wrap gap-4 items-center mt-2">
-        <div>
-          <h3 class="font-semibold">Average Rating:</h3>
-          <p class="text-yellow-600 text-xl">{{ average_rating }}</p>
-        </div>
-        <div>        
-          <p class="text-gray-600 mt-4">Sign in to rate, comment, or favorite this product.</p>
-        </div>
-      </div>
-  {% endif %}
-
   {% if current_user.is_authenticated %}
     <!-- Add Comment Form -->
     <form method="post" action="{{ url_for('add_comment', upc=product.upc) }}" class="mt-4">
@@ -108,8 +47,5 @@
       <li class="text-gray-500">No comments yet</li>
     {% endfor %}
   </ul>
-{% else %}
-  <h2>Product Pending Approval</h2>
-{% endif %}
 
 {% endblock %}
