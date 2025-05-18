@@ -22,7 +22,7 @@
         <div id="detected-upc" class="mt-4">
           <label for="upc-input" class="block text-sm font-medium text-gray-700">Enter UPC Code:</label>
           <div class="flex flex-col sm:flex-row gap-2 mt-1">
-            <input type="text" id="upc-input" class="border border-gray-300 rounded-md shadow-sm p-2 flex-1" />
+            <input type="tel" inputmode="numeric" pattern="[0-9]*" id="upc-input" class="border border-gray-300 rounded-md shadow-sm p-2 flex-1" />
             <button id="refresh-code" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Submit Code</button>
           </div>
         </div>
@@ -179,30 +179,35 @@ let html5QrcodeScanner;
 async function startHtml5QrcodeScanner() {
   resultEl.textContent = "Waiting for scan...";
   scanAgainBtn.style.display = "none";
-  scannerEl.innerHTML = ""; // Clear previous scanner
+  scannerEl.innerHTML = ""; // Clear previous instance
 
+  const cameras = await Html5Qrcode.getCameras();
+  const backCameraId = cameras.find(cam => cam.label.toLowerCase().includes('back'))?.id || cameras[0]?.id;
 
   html5QrcodeScanner = new Html5Qrcode("scanner");
 
   html5QrcodeScanner.start(
-    { facingMode: "environment" },
+    { deviceId: { exact: backCameraId } },
     {
       fps: 10,
-      qrbox: 250,
+      qrbox: 300,
       experimentalFeatures: { useBarCodeDetectorIfSupported: true },
       formatsToSupport: [
         Html5QrcodeSupportedFormats.UPC_A,
         Html5QrcodeSupportedFormats.UPC_E,
         Html5QrcodeSupportedFormats.EAN_13,
         Html5QrcodeSupportedFormats.CODE_128
-      ]
+      ],
+      videoConstraints: {
+        facingMode: "environment",
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
     },
     qrCodeMessage => {
-      // Barcode scanned successfully
       upcInput.value = qrCodeMessage;
       handleUPCSearch(qrCodeMessage);
 
-      // Stop scanning after detection
       html5QrcodeScanner.stop().then(() => {
         scanAgainBtn.style.display = "inline-block";
       }).catch(err => {
@@ -210,15 +215,13 @@ async function startHtml5QrcodeScanner() {
       });
     },
     errorMessage => {
-      // Optional: log scan errors
-      // console.log("Scan error:", errorMessage);
+      // Optional error handling
     }
   ).catch(err => {
     console.error("Error starting html5-qrcode scanner:", err);
     resultEl.textContent = "Error starting scanner";
   });
 }
-
 
     // Scan again button handler
     scanAgainBtn.addEventListener('click', (e) => {
