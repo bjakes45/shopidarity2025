@@ -3,26 +3,27 @@
 {% block content %}
 <div class="flex">
   <!-- Sidebar -->
-  <aside class="w-64 bg-gray-100 min-h-screen p-4">
-    <h2 class="text-xl font-semibold mb-6"><a href="{{ url_for('dashboard') }}"> My Dashboard </a></h2>
-    <nav class="space-y-2">
-      <a href="{{ url_for('dashboard_added_products') }}" class="block text-blue-600 hover:underline">My Added Products</a>
-      <a href="{{ url_for('dashboard_favorites') }}" class="block text-blue-600 hover:underline">My Favorites</a>
-      <a href="{{ url_for('dashboard_ratings') }}" class="block text-blue-600 hover:underline">My Ratings</a>
-      <a href= "{{ url_for('dashboard_comments') }}" class="block text-blue-600 hover:underline">My Comments</a>
+  <aside class="w-40 sm:w-56 md:w-64 shrink-0 bg-gray-100 p-4 sm:p-6 min-h-screen overflow-y-auto text-sm sm:text-base">
+    <h2 class="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">
+      <a href="{{ url_for('dashboard') }}" class="text-blue-600 hover:underline">My Dashboard</a>
+    </h2>
+    <nav class="flex flex-col gap-2">
+      <a href="{{ url_for('dashboard_added_products') }}" class="text-blue-600 hover:underline">My Added Products</a>
+      <a href="{{ url_for('dashboard_favorites') }}" class="text-blue-600 hover:underline">My Favorites</a>
+      <a href="{{ url_for('dashboard_ratings') }}" class="text-blue-600 hover:underline">My Ratings</a>
+      <a href="{{ url_for('dashboard_comments') }}" class="text-blue-600 hover:underline">My Comments</a>
 
-      </br>
       {% if current_user.is_authenticated and current_user.admin %}
-        <h2>Admin</h2>
-        <a href="{{ url_for('dashboard_suggestions') }}" class="block text-blue-600 hover:underline">Review Products</a>
-        <a href="{{ url_for('dashboard_new_user') }}" class="block text-blue-600 hover:underline">Manage Users</a>
+        <hr class="my-4 border-gray-300">
+        <h2 class="font-semibold text-gray-700">Admin</h2>
+        <a href="{{ url_for('dashboard_suggestions') }}" class="text-blue-600 hover:underline">Review Products</a>
+        <a href="{{ url_for('dashboard_new_user') }}" class="text-blue-600 hover:underline">Manage Users</a>
       {% endif %}
-
     </nav>
   </aside>
 
   <!-- Main Content -->
-  <main class="flex-1 p-6 space-y-10">
+  <main class="flex-1 p-6 space-y-10 overflow-y-auto">
     {% block dashboard %}{% endblock %}
   </main>
 </div>

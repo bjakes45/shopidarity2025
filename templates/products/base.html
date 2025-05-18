@@ -5,40 +5,35 @@
 <div class="flex h-screen overflow-hidden">
 
   <!-- Sidebar -->
-  <aside class="w-64 shrink-0 bg-gray-100 p-6 overflow-y-auto">
-    <h2 class="text-xl font-semibold mb-6 text-gray-800">
-      <a href="{{ url_for('product_detail', upc=product.upc) }}" class="text-blue-600 hover:underline">
-        {% if product.upc|length in [12,13]%}UPC:{% else %}PLU:{% endif %}{{ product.upc }}
+  <aside class="w-40 sm:w-56 md:w-64 shrink-0 bg-gray-100 p-4 sm:p-6 overflow-y-auto text-sm sm:text-base">
+  <h2 class="text-lg sm:text-lg font-semibold mb-4 sm:mb-6 text-gray-800">
+    <a href="{{ url_for('product_detail', upc=product.upc) }}" class="text-blue-600 hover:underline">
+      {% if product.upc|length in [12,13]%}UPC:{% else %}PLU:{% endif %} {{ product.upc }}
+    </a>
+  </h2>
+
+  <nav class="flex flex-col gap-3">
+    <a href="{{ url_for('product_comments', upc=product.upc) }}" class="text-gray-700 font-medium hover:text-blue-600 hover:underline">
+      All Comments
+    </a>
+    {% if product.nutriments %}
+      <a href="{{ url_for('product_nutrifacts', upc=product.upc) }}" class="text-gray-700 font-medium hover:text-blue-600 hover:underline">
+        Nutrifacts
       </a>
-    </h2>
-
-    <nav class="space-y-4">
-      <a href="{{ url_for('product_comments', upc=product.upc) }}"
-         class="block text-gray-700 font-medium hover:text-blue-600 transition duration-200 hover:underline">
-        All Comments
+    {% endif %}
+    {% if product.deals %}
+      <a href="{{ url_for('product_deals', upc=product.upc) }}" class="text-gray-700 font-medium hover:text-blue-600 hover:underline">
+        Deals
       </a>
+    {% endif %}
+    <a href="{{ url_for('product_new_deal', upc=product.upc) }}"
+       class="mt-4 inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition w-full justify-center text-sm">
+      <span class="text-lg leading-none">+</span>
+      Add New Deal
+    </a>
+  </nav>
+</aside>
 
-      {% if product.nutriments %}
-        <a href="{{ url_for('product_nutrifacts', upc=product.upc) }}"
-           class="block text-gray-700 font-medium hover:text-blue-600 transition duration-200 hover:underline">
-          Nutrifacts
-        </a>
-      {% endif %}
-
-      {% if product.deals %}
-        <a href="{{ url_for('product_deals', upc=product.upc) }}"
-           class="block text-gray-700 font-medium hover:text-blue-600 transition duration-200 hover:underline">
-          Deals
-        </a>
-      {% endif %}
-
-      <a href="{{ url_for('product_new_deal', upc=product.upc) }}"
-         class="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-200 w-full justify-center">
-        <span class="text-xl leading-none">+</span>
-        Add New Deal
-      </a>
-    </nav>
-  </aside>
 
   <!-- Main Content -->
   <main class="flex-1 overflow-y-auto p-6 space-y-10">
