@@ -181,16 +181,16 @@
       html5QrcodeScanner = new Html5Qrcode("scanner");
 
       html5QrcodeScanner.start(
-        { facingMode: "environment" },
+        { deviceId: { exact: await Html5Qrcode.getCameras().then(cameras => cameras[0]?.id) } },
         {
           fps: 10,
           qrbox: 250,
           experimentalFeatures: { useBarCodeDetectorIfSupported: true },
           formatsToSupport: [
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.UPC_E,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.CODE_128
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.CODE_128
           ]
         },
         qrCodeMessage => {
