@@ -25,7 +25,7 @@ def enforce_rate_limit():
 
     if usage:
         if now > usage.reset_time:
-            usage.reset()
+            usage.reset(remaining=5)
         elif usage.remaining <= 0:        	
             flash("You have hit your Product entry limit until tomorrow", "error")
             return jsonify({"error": "Rate limit exceeded"}), 429

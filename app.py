@@ -42,20 +42,12 @@ from helpers import (
 
 load_dotenv()
 
-
-#APP CONTEXT
-API_USAGE = {
-    "count": 0,
-    "reset_time": datetime.utcnow() + timedelta(days=1),
-    "remaining": 100,  # starting assumption
-    "reset_timestamp": None  # from UPCDB header
-}
-
 #Init server and database connection
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 app.secret_key = os.getenv("SECRET_KEY")
 csrf = CSRFProtect(app)
+
 if os.environ.get('RENDER'):
     # Running on Render – require DATABASE_URL
     database_url = os.environ.get('DATABASE_URL')
@@ -70,7 +62,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 translate_client = translate.Client()
-
 
 # Initialize Login
 login_manager = LoginManager()
@@ -111,7 +102,7 @@ def initialize_database():
       db.session.commit()
 
     #if User.query.count() <= 1:
-     # seed_users_with_interactions()
+    #  seed_users_with_interactions()
 
     if Deal.query.count() <= 100:
       seed_deals()
@@ -234,10 +225,6 @@ def product_comments(upc):
 @app.route('/products/new', methods=['GET', 'POST'])
 def new_product():
     ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
-
-    rate_limit_response = enforce_rate_limit()
-    if rate_limit_response:
-        return redirect(url_for('scan'))
 
     is_logged_in = current_user.is_authenticated
 
@@ -557,6 +544,10 @@ def check_upc(upc):
 #API LOOKUP
 @app.route('/api/lookup-upc/<upc>')
 def lookup_upc(upc):
+
+    rate_limit_response = enforce_rate_limit()
+    if rate_limit_response:
+        return jsonify({"error": "Rate limit exceeded"}), 404
     # Try Open Food Facts first
     off_url = f"https://world.openfoodfacts.org/api/v0/product/{upc}.json"
     off_response = requests.get(off_url)

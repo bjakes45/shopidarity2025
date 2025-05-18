@@ -1,6 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from sqlalchemy import func
 from sqlalchemy import Enum as SQLEnum

@@ -2,82 +2,133 @@
 {% block title %}Add New Product{% endblock %}
 {% block content %}
 <div class="max-w-xl mx-auto p-6">
-  <h1 class="text-2xl font-bold mb-4">Create New Product</h1>
-  
+  <h1 class="text-2xl font-bold mb-6 text-gray-800">Create New Product</h1>
+
   <form method="POST" action="{{ url_for('new_product', upc=upc) }}" class="space-y-4">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input name="name" placeholder="Product Name" required class="input" />
-    <input name="upc" placeholder="UPC" value="{{ upc }}" required class="input" />
-    <input name="brand" placeholder="Brand" class="input" />
-    <input name="category" placeholder="Category" class="input" />
-    <input name="image_url" placeholder="Image-url" type="hidden" class="input" />
-    <input name="nutriments" placeholder="Nutrifacts" type="hidden" class="input" />
-    <input name="offers" placeholder="Offers" type="hidden" class="input" />
-    <input name="verified_by" placeholder="Verified_by" type="hidden" class="input" />
-    <textarea name="description" placeholder="Description" class="input"></textarea>
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Submit</button>
-  </form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    <!-- Hidden Inputs -->
+    <input type="hidden" name="image_url" placeholder="Image-url" />
+    <input type="hidden" name="nutriments" placeholder="Nutrifacts" />
+    <input type="hidden" name="offers" placeholder="Offers" />
+    <input type="hidden" name="verified_by" placeholder="Verified_by" />
+
+    <!-- UPC and Lookup -->
+    <div class="flex items-center gap-2">
+      <input
+      name="upc"
+      placeholder="UPC"
+      value="{{ upc }}"
+      required
+      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+      />
+      <button
+      type="button"
+      name="lookup-btn"
+      id="lookup-btn"
+      onclick="lookupAndTranslate()"
+      class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition"
+      >
+      🔍 Lookup
+    </button>
+  </div>
+
+  <!-- Product Name -->
+  <input
+  name="name"
+  placeholder="Product Name"
+  required
+  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+  />
+
+  <!-- Brand -->
+  <input
+  name="brand"
+  placeholder="Brand"
+  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+  />
+
+  <!-- Category -->
+  <input
+  name="category"
+  placeholder="Category"
+  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+  />
+
+  <!-- Description -->
+  <textarea
+  name="description"
+  placeholder="Description"
+  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+  ></textarea>
+
+  <!-- Action Buttons -->
+  <div class="flex items-center gap-4 mt-4">
+    <button
+    type="submit"
+    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
+    >
+    Submit
+  </button>
+  <button
+  type="button"
+  id="edit-btn"
+  class="border border-gray-400 text-gray-700 px-4 py-2 rounded hidden hover:bg-gray-100 transition"
+  >
+  ✏️ Edit
+</button>
+</div>
+</form>
 </div>
 
-<!-- UPC Status Message -->
-<div id="lookup-status" class="text-sm mb-2 text-gray-600"></div>
-<!-- Product Preview Area -->
 
+<!-- UPC Lookup Status Message -->
+<div id="lookup-status" class="text-sm mb-2 text-gray-600"></div>
+
+<!-- Product Preview Area -->
 <div id="product-preview" class="mt-4 hidden">
   <p class="text-sm text-gray-500 mb-4">
     <span>Information Preview</span>
   </p>
   <div class="flex flex-col sm:flex-row items-start gap-4 bg-white p-4 rounded-lg shadow">
-    
-    <!-- Product Image -->
     <img id="product-image" src="" alt="Product Image" 
-         class="w-32 h-32 object-contain rounded border border-gray-200 hidden sm:block" />
-
-    <!-- Product Info -->
+    class="w-32 h-32 object-contain rounded border border-gray-200 hidden sm:block" />
     <div class="flex-1 space-y-4">
       <div id="nutriment-data" class="text-sm text-gray-700"></div>
       <div id="offers-data" class="text-sm text-gray-700"></div>
     </div>
-    
   </div>
 </div>
-
 
 <script>
   function formatNutriments(nutriments) {
     if (!nutriments || typeof nutriments !== 'object') return "<p class='text-gray-500'>No nutrition data available.</p>";
-  
-    const entries = Object.entries(nutriments).slice(0, 12); // limit to 12
-    let html = '<div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-4">'; // Flex grid for responsive layout
-
+    const entries = Object.entries(nutriments).slice(0, 12);
+    let html = '<div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-4">';
     for (const [key, value] of entries) {
       html += `
-        <div class="flex flex-wrap gap-2">
-          <p class="bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 text-xs">${key}<br>
-          ${value}</p>
-        </div>
-     `;
+      <div class="flex flex-wrap gap-2">
+      <p class="bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 text-xs">${key}<br>${value}</p>
+      </div>`;
     }
-
     html += '</div>';
     return html;
   }
 
   function formatOffers(offers) {
     if (!offers || typeof offers !== 'object') return "<p class='text-gray-500'>No Offers data available.</p>";
-    const limitedOffers = offers.slice(0, 3); // show only 3 offers
+    const limitedOffers = offers.slice(0, 3);
     let html = '<div class="space-y-4">';
     for (const offer of limitedOffers) {
       html += `
-        <div class="bg-white p-4 rounded-lg shadow text-sm text-gray-700">
-          <p><span class="font-medium text-gray-800">Merchant:</span> ${offer.merchant || 'N/A'}</p>
-          <p><span class="font-medium text-gray-800">Price:</span> ${offer.price ? `$${offer.price}` : 'N/A'}</p>
-          <p><span class="font-medium text-gray-800">Condition:</span> ${offer.condition || 'N/A'}</p>
-          <p><span class="font-medium text-gray-800">Link:</span> 
-            <a href="${offer.link}" target="_blank" class="text-blue-600 hover:underline">${offer.link}</a>
-          </p>
-        </div>
-      `;
+      <div class="bg-white p-4 rounded-lg shadow text-sm text-gray-700">
+      <p><span class="font-medium text-gray-800">Merchant:</span> ${offer.merchant || 'N/A'}</p>
+      <p><span class="font-medium text-gray-800">Price:</span> ${offer.price ? `$${offer.price}` : 'N/A'}</p>
+      <p><span class="font-medium text-gray-800">Condition:</span> ${offer.condition || 'N/A'}</p>
+      <p><span class="font-medium text-gray-800">Link:</span> 
+      <a href="${offer.link}" target="_blank" class="text-blue-600 hover:underline">${offer.link}</a>
+      </p>
+      </div>`;
     }
     html += '</div>';
     return html;
@@ -85,14 +136,15 @@
 
   async function lookupUPC(upc) {
     if (!upc) return;
-
     const statusDiv = document.getElementById("lookup-status");
+    const lookupBtn = document.getElementById("lookup-btn");
     const preInfo = document.getElementById("product-preview");
     const imageEl = document.getElementById("product-image");
     const nutrimentDiv = document.getElementById("nutriment-data");
     const offersDiv = document.getElementById("offers-data");
 
-    statusDiv.textContent = "Searching... ";
+    statusDiv.textContent = "Searching...";
+    lookupBtn.classList.add("hidden")
 
     try {
       const res = await fetch(`/api/lookup-upc/${upc}`);
@@ -109,24 +161,21 @@
         document.querySelector('input[name="verified_by"]').value = data.source || '';
 
         preInfo.classList.remove("hidden");
-        
-        // Image preview
+
         if (data.data.image_url) {
           imageEl.src = data.data.image_url;
           imageEl.classList.remove("hidden");
         }
 
-        // Nutriment display
         if (data.data.nutriments && Object.keys(data.data.nutriments).length > 0) {
           nutrimentDiv.innerHTML = formatNutriments(data.data.nutriments);
         }
 
-        // Offers display
         if (Array.isArray(data.data.offers) && data.data.offers.length > 0) {
           offersDiv.innerHTML = formatOffers(data.data.offers);
-        }  
-        
-        if (data.source == 'OFF'){
+        }
+
+        if (data.source == 'OFF') {
           statusDiv.textContent = "Data Confirmed by World Food Facts";
         } else if (data.source == 'UPCDB') {
           statusDiv.textContent = "Data Confirmed by UPCitemDB";
@@ -145,82 +194,126 @@
       nutrimentDiv.innerHTML = '';
     }
   }
-async function isNotInEnglish(text, csrfToken) {
-  const res = await fetch('/api/check_language', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken
-    },
-    body: JSON.stringify({ text })
-  });
 
-  if (!res.ok) {
-    console.warn("Language detection failed");
-    return false;
+  async function isNotInEnglish(text, csrfToken) {
+    const res = await fetch('/api/check_language', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({ text })
+    });
+
+    if (!res.ok) {
+      console.warn("Language detection failed");
+      return false;
+    }
+
+    const data = await res.json();
+    return data.not_in_english;
   }
 
-  const data = await res.json();
-  return data.not_in_english;
-}
+  async function translateText(field, text, csrfToken) {
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({ field, text })
+    });
 
-async function translateText(field, text, csrfToken) {
-  const res = await fetch('/api/translate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken
-    },
-    body: JSON.stringify({ field, text })
-  });
+    if (!res.ok) {
+      console.warn("Translation request failed");
+      return text;
+    }
 
-  if (!res.ok) {
-    console.warn("Translation request failed");
-    return text;
+    const data = await res.json();
+    return data.translated || text;
   }
 
-  const data = await res.json();
-  return data.translated || text;
-}
+  async function translateFieldsIfNeeded(csrfToken) {
+    const nameInput = document.querySelector('input[name="name"]');
+    const brandInput = document.querySelector('input[name="brand"]');
+    const catInput = document.querySelector('input[name="category"]');
+    const descTextarea = document.querySelector('textarea[name="description"]');
 
-async function translateFieldsIfNeeded(csrfToken) {
-  const nameInput = document.querySelector('input[name="name"]');
-  const brandInput = document.querySelector('input[name="brand"]');
-  const catInput = document.querySelector('input[name="category"]');
-  const descTextarea = document.querySelector('textarea[name="description"]');
-
-  const fields = [
+    const fields = [
     { el: nameInput, name: "name" },
     { el: brandInput, name: "brand" },
     { el: catInput, name: "category" },
     { el: descTextarea, name: "description" }
-  ];
+    ];
 
-  for (const { el, name } of fields) {
-    const original = el.value.trim();
-    if (!original) continue;
+    for (const { el, name } of fields) {
+      const original = el.value.trim();
+      if (!original) continue;
 
-    const needsTranslation = await isNotInEnglish(original, csrfToken);
-    if (needsTranslation[0]) {
-      el.dataset.original = original;
-      el.value = "Translating...";
-      const translated = await translateText(name, original, csrfToken);
-      el.value = translated;
+      const needsTranslation = await isNotInEnglish(original, csrfToken);
+      if (needsTranslation[0]) {
+        el.dataset.original = original;
+        el.value = "Translating...";
+        const translated = await translateText(name, original, csrfToken);
+        el.value = translated;
+      }
     }
   }
-}
 
-document.addEventListener("DOMContentLoaded", function () {
-  const upc = "{{ upc }}";
-  const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-  if (upc) {
-    lookupUPC(upc).then(() => {
-      translateFieldsIfNeeded(csrfToken);
+  function setFieldsEditable(editable) {
+    const inputs = ['name', 'brand', 'category', 'description'];
+    inputs.forEach(field => {
+      const el = document.querySelector(`[name="${field}"]`);
+      if (el) {
+        el.readOnly = !editable;
+        el.classList.toggle('bg-gray-100', !editable); // Optional visual style
+      }
+      // ✅ Update verified_by field to append "- User Edited" if not already present
+      const verifiedInput = document.querySelector('input[name="verified_by"]');
+      if (editable && verifiedInput && !verifiedInput.value.includes('- User Edited')) {
+        verifiedInput.value += ' - User Edited';
+      }
     });
   }
-});
 
+  function showEditButton(show) {
+    const editBtn = document.getElementById("edit-btn");
+    if (editBtn) {
+      editBtn.classList.toggle("hidden", !show);
+    }
+  }
+
+  function hasDataPopulated(fields) {
+    return fields.some(field => {
+      const el = document.querySelector(`[name="${field}"]`);
+      return el && el.value.trim() !== "";
+    });
+  }
+
+  async function lookupAndTranslate() {
+    const upc = document.querySelector('[name="upc"]').value;
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+    if (!upc) return;
+
+    await lookupUPC(upc);
+    await translateFieldsIfNeeded(csrfToken);
+
+    const populatedFields = ['name', 'brand', 'category', 'description'];
+    if (hasDataPopulated(populatedFields)) {
+      setFieldsEditable(false);
+      showEditButton(true);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const editBtn = document.getElementById("edit-btn");
+    if (editBtn) {
+      editBtn.addEventListener("click", () => {
+        setFieldsEditable(true);
+        editBtn.classList.add("hidden");
+      });
+    }
+  });
 </script>
-
 {% endblock %}
