@@ -172,49 +172,60 @@
       });
     }
 
-    // html5-qrcode scanner for mobile
-    let html5QrcodeScanner;
-    function startHtml5QrcodeScanner() {
-      resultEl.textContent = "Waiting for scan...";
-      scanAgainBtn.style.display = "none";
-      scannerEl.innerHTML = ""; // clear
+    // HTML5-QRCode scanner for mobile
+let html5QrcodeScanner;
 
-      html5QrcodeScanner = new Html5Qrcode("scanner");
+async function startHtml5QrcodeScanner() {
+  resultEl.textContent = "Waiting for scan...";
+  scanAgainBtn.style.display = "none";
+  scannerEl.innerHTML = ""; // Clear previous scanner
 
-      html5QrcodeScanner.start(
-        { deviceId: { exact: await Html5Qrcode.getCameras().then(cameras => cameras[0]?.id) } },
-        {
-          fps: 10,
-          qrbox: 250,
-          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-          formatsToSupport: [
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E,
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.CODE_128
-          ]
-        },
-        qrCodeMessage => {
-          // barcode scanned successfully
-          upcInput.value = qrCodeMessage;
-          handleUPCSearch(qrCodeMessage);
+  const cameras = await Html5Qrcode.getCameras();
+  const cameraId = cameras[0]?.id;
 
-          // Stop scanning after detection
-          html5QrcodeScanner.stop().then(() => {
-            scanAgainBtn.style.display = "inline-block";
-          }).catch(err => {
-            console.error("Failed to stop html5-qrcode scanner:", err);
-          });
-        },
-        errorMessage => {
-          // handle scan failure or no detection (can ignore or log if needed)
-          // console.log("Scan error:", errorMessage);
-        }
-      ).catch(err => {
-        console.error("Error starting html5-qrcode scanner:", err);
-        resultEl.textContent = "Error starting scanner";
+  if (!cameraId) {
+    console.error("No camera found.");
+    resultEl.textContent = "No camera found.";
+    return;
+  }
+
+  html5QrcodeScanner = new Html5Qrcode("scanner");
+
+  html5QrcodeScanner.start(
+    { deviceId: { exact: cameraId } },
+    {
+      fps: 10,
+      qrbox: 250,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.CODE_128
+      ]
+    },
+    qrCodeMessage => {
+      // Barcode scanned successfully
+      upcInput.value = qrCodeMessage;
+      handleUPCSearch(qrCodeMessage);
+
+      // Stop scanning after detection
+      html5QrcodeScanner.stop().then(() => {
+        scanAgainBtn.style.display = "inline-block";
+      }).catch(err => {
+        console.error("Failed to stop html5-qrcode scanner:", err);
       });
+    },
+    errorMessage => {
+      // Optional: log scan errors
+      // console.log("Scan error:", errorMessage);
     }
+  ).catch(err => {
+    console.error("Error starting html5-qrcode scanner:", err);
+    resultEl.textContent = "Error starting scanner";
+  });
+}
+
 
     // Scan again button handler
     scanAgainBtn.addEventListener('click', (e) => {
