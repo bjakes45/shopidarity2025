@@ -181,19 +181,11 @@ async function startHtml5QrcodeScanner() {
   scanAgainBtn.style.display = "none";
   scannerEl.innerHTML = ""; // Clear previous scanner
 
-  const cameras = await Html5Qrcode.getCameras();
-  const cameraId = cameras[0]?.id;
-
-  if (!cameraId) {
-    console.error("No camera found.");
-    resultEl.textContent = "No camera found.";
-    return;
-  }
 
   html5QrcodeScanner = new Html5Qrcode("scanner");
 
   html5QrcodeScanner.start(
-    { deviceId: { exact: cameraId } },
+    { facingMode: "environment" },
     {
       fps: 10,
       qrbox: 250,
