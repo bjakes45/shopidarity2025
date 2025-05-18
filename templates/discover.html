@@ -6,11 +6,12 @@
 {% from "partials/_products.html" import render_products %}
 
 <div>
-  <div class="flex items-center border-b border-gray-300 mb-4">
-    <h1 class="text-2xl font-extrabold mr-6">Discover</h1>
-    <ul class="flex space-x-1 text-base" id="tab-nav">
+<div class="flex items-center border-b border-gray-300 mb-4 overflow-x-auto">
+  <h1 class="text-xl md:text-2xl font-extrabold mr-6 shrink-0">Discover</h1>
+  <div class="overflow-x-auto overflow-y-hidden no-scrollbar">
+  <ul class="flex space-x-1 text-base whitespace-nowrap" id="tab-nav">
       {% for name, label in [('users', 'Similar Users'), ('products', 'Recommended Products'), ('groups', 'Potential Groups'), ('deals', 'Nearby Deals')] %}
-        <li>
+        <li class="shrink-0">
           <a href="{{ url_for('discover', tab=name) }}"
              class="tab-link px-3 py-1.5 rounded-t-md transition-all duration-150
                 {{ 
@@ -25,6 +26,8 @@
       {% endfor %}
     </ul>
   </div>
+</div>
+
 </div>
 
 
