@@ -575,29 +575,12 @@ def lookup_upc(upc):
             })
 
     # If OFF fails, fallback to UPCitemDB
-    now = datetime.utcnow()
-    if now > API_USAGE["reset_time"]:
-        API_USAGE["count"] = 0
-        API_USAGE["reset_time"] = now + timedelta(days=1)
-
-    if API_USAGE["count"] >= 100:
-        return jsonify({"error": "UPCitemDB daily limit reached."}), 429
-
     upcdb_response = requests.get(
         f"https://api.upcitemdb.com/prod/trial/lookup?upc={upc}",
         headers={"Content-Type": "application/json"}
     )
 
     if upcdb_response.ok:
-    
-        # Extract rate limit headers
-        API_USAGE["count"] += 1
-        API_USAGE["remaining"] = int(upcdb_response.headers.get("X-RateLimit-Remaining", 100))
-        reset_unix = upcdb_response.headers.get("X-RateLimit-Reset")
-        if reset_unix:
-            API_USAGE["reset_timestamp"] = datetime.utcfromtimestamp(int(reset_unix))
-            API_USAGE["reset_time"] = API_USAGE["reset_timestamp"]  # Keep consistent
-
         data = upcdb_response.json()
         items = data.get("items", [])
         if items:
@@ -614,7 +597,6 @@ def lookup_upc(upc):
                     "offers": item.get('offers', '')
                 }
             })
-
     return jsonify({"error": "Product not found"}), 404
 #CHECK LANGUAGE
 @app.route('/api/check_language', methods=['POST'])

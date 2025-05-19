@@ -242,8 +242,8 @@ class APIUsage(db.Model):
     reset_time = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(days=1))
     reset_timestamp = db.Column(db.DateTime, nullable=True)
 
-    def reset(self):
+    def reset(self, remaining=10):
         self.count = 1
-        self.remaining = 10
+        self.remaining = remaining
         self.reset_time = datetime.utcnow() + timedelta(days=1)
 
