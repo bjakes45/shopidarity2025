@@ -48,7 +48,7 @@
     <ul class="divide-y">
       {% for user in users %}
         <li class="py-2 flex justify-between items-center">
-          <span>{{ user.username }} ({{ user.email }})</span>
+          <span><a href="{{ url_for('user_detail', user_id=user.id) }}">{{ user.username }} ({{ user.email }})</a></span>
           <button 
             class="text-red-600 hover:underline text-sm" 
             onclick="confirmDelete('{{ user.id }}', '{{ user.username }}')"

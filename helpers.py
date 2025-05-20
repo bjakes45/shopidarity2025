@@ -18,8 +18,7 @@ faker = Faker()
 def get_client_ip():
     return request.remote_addr
 
-def get_usage():
-    ip = get_client_ip()
+def get_usage(ip):
     usage = APIUsage.query.get(ip)
     return usage
 

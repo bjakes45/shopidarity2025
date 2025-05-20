@@ -225,7 +225,8 @@ def product_comments(upc):
 #NEW PRODUCT
 @app.route('/products/new', methods=['GET', 'POST'])
 def new_product():
-    usage = get_usage()
+    ip = get_client_ip()
+    usage = get_usage(ip)
     is_logged_in = current_user.is_authenticated
 
     upc = request.args.get('upc', '')  # Retrieve UPC query
@@ -304,7 +305,7 @@ def new_product():
             status=status,
             origin='user',
             verified_by=verified_by,
-            suggested_by_ip=ip_address,
+            suggested_by_ip=ip,
             user_id=user_id
         )
         db.session.add(new_product)
@@ -738,6 +739,10 @@ def delete_user():
 
     return redirect(url_for("dashboard_new_user"))
 
+@app.route('/user_detail/<user_id>')
+@login_required
+def user_detail(user_id):
+    return render_template("user/user_detail.html")
 
 # Whitelist of supported cities
 #SUPPORTED_CITIES = {('Vancouver','Canada')}
