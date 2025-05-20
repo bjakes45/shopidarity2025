@@ -7,7 +7,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 from flask import flash, redirect, request, jsonify
 from flask_login import current_user
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash,check_password_hash
 from faker import Faker
 from math import ceil
 

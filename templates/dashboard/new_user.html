@@ -1,38 +1,104 @@
 {% extends "dashboard/base.html" %}
 {% block dashboard %}
-<h2 class="text-2xl font-semibold mb-4">Create a New User</h2>
+<h2 class="text-2xl font-semibold mb-6">Manage Users</h2>
 
-<form method="POST" class="max-w-md bg-white shadow p-6 rounded border">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="flex flex-wrap gap-6">
+  <!-- Create User Form -->
+  <form method="POST" class="w-full md:w-1/2 bg-white shadow p-6 rounded border">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-  <div class="mb-4">
-    <label class="block text-gray-700 font-medium">Username</label>
-    <input type="text" name="username" class="w-full border px-3 py-2 rounded-lg" required>
+    <div class="mb-4">
+      <label class="block text-gray-700 font-medium">Username</label>
+      <input type="text" name="username" class="w-full border px-3 py-2 rounded-lg" required>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-gray-700 font-medium">Email</label>
+      <input type="email" name="email" class="w-full border px-3 py-2 rounded-lg" required>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-gray-700 font-medium">Password</label>
+      <input type="password" name="password" class="w-full border px-3 py-2 rounded-lg" required>
+    </div>
+
+    <div class="mb-4">
+      <label class="inline-flex items-center">
+        <input type="checkbox" name="admin" class="mr-2">
+        <span class="text-gray-700">Make admin</span>
+      </label>
+    </div>
+
+    <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
+      Create User
+    </button>
+
+    {% if message %}
+      <p class="mt-4 text-green-600">{{ message }}</p>
+    {% endif %}
+  </form>
+
+  <!-- User Search + Delete -->
+  <div class="w-full md:w-1/2 bg-white shadow p-6 rounded border">
+    <form method="GET" class="mb-4">
+      <label class="block text-gray-700 font-medium mb-1">Search Users</label>
+      <input type="text" name="q" placeholder="Enter username or email" class="w-full border px-3 py-2 rounded-lg">
+    </form>
+
+    <ul class="divide-y">
+      {% for user in users %}
+        <li class="py-2 flex justify-between items-center">
+          <span>{{ user.username }} ({{ user.email }})</span>
+          <button 
+            class="text-red-600 hover:underline text-sm" 
+            onclick="confirmDelete('{{ user.id }}', '{{ user.username }}')"
+          >
+            Delete
+          </button>
+        </li>
+      {% else %}
+        <li class="text-gray-500 py-2">No users found.</li>
+      {% endfor %}
+    </ul>
   </div>
+</div>
 
-  <div class="mb-4">
-    <label class="block text-gray-700 font-medium">Email</label>
-    <input type="email" name="email" class="w-full border px-3 py-2 rounded-lg" required>
+<!-- Password Confirmation Modal -->
+<div id="delete-modal" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+  <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
+    <form method="POST" action="/delete-user" id="delete-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="user_id" id="delete-user-id">
+      
+      <h3 class="text-lg font-semibold mb-2">Confirm Deletion</h3>
+      <p class="mb-4 text-sm text-gray-600">Enter your password to confirm deletion of <span id="delete-username" class="font-medium"></span>.</p>
+
+      <input 
+        type="password" 
+        name="confirm_password" 
+        placeholder="Your password" 
+        class="w-full border px-3 py-2 rounded-lg mb-4" 
+        required
+      >
+
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+      </div>
+    </form>
   </div>
+</div>
 
-  <div class="mb-4">
-    <label class="block text-gray-700 font-medium">Password</label>
-    <input type="password" name="password" class="w-full border px-3 py-2 rounded-lg" required>
-  </div>
+<script>
+  function confirmDelete(userId, username) {
+    document.getElementById('delete-user-id').value = userId;
+    document.getElementById('delete-username').textContent = username;
+    document.getElementById('delete-modal').classList.remove('hidden');
+  }
 
-  <div class="mb-4">
-    <label class="inline-flex items-center">
-      <input type="checkbox" name="admin" class="mr-2">
-      <span class="text-gray-700">Make admin</span>
-    </label>
-  </div>
-
-  <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
-    Create User
-  </button>
-</form>
-
-{% if message %}
-  <p class="mt-4 text-green-600">{{ message }}</p>
-{% endif %}
+  function closeModal() {
+    document.getElementById('delete-modal').classList.add('hidden');
+    document.getElementById('delete-form').reset();
+  }
+</script>
 {% endblock %}

@@ -5,6 +5,8 @@ from enum import Enum
 from sqlalchemy import func
 from sqlalchemy import Enum as SQLEnum
 from geopy.distance import geodesic
+from werkzeug.security import generate_password_hash,check_password_hash
+
 
 
 db = SQLAlchemy()
@@ -31,6 +33,9 @@ class User(db.Model, UserMixin):
     deals = db.relationship('Deal', back_populates='user')
     
     #METHODS
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
+
     def shared_favorites(self, other_user):
         """Return a set of shared favorite product UPCs."""
         my_fav_ids = set(f.product_upc for f in self.favorites)

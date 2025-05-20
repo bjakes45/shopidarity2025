@@ -685,6 +685,13 @@ def dashboard_new_user():
     if not current_user.admin:
         return redirect(url_for('dashboard'))
 
+
+    query = request.args.get("q", "")
+    users = []
+    users = User.query.filter(
+            (User.username.ilike(f"%{query}%")) | (User.email.ilike(f"%{query}%"))
+            ).all()
+
     if request.method == 'POST':
         username = request.form['username']
         email = request.form['email']
@@ -706,7 +713,31 @@ def dashboard_new_user():
             flash(f'User {username} created successfully.', 'success')
             return redirect(url_for('dashboard_new_user'))
 
-    return render_template('dashboard/new_user.html')
+    return render_template('dashboard/new_user.html', users=users, query=query)
+
+@app.route('/delete-user', methods=['POST'])
+@login_required
+def delete_user():
+    if not current_user.admin:
+        return redirect(url_for('dashboard'))
+
+    user_id = request.form.get("user_id")
+    confirm_password = request.form.get("confirm_password")
+
+    if not current_user.check_password(confirm_password):
+        flash("Incorrect password. Deletion cancelled.", "danger")
+        return redirect(url_for("dashboard_new_user"))
+
+    user = User.query.get(user_id)
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+        flash(f"User {user.username} deleted.", "success")
+    else:
+        flash("User not found.", "warning")
+
+    return redirect(url_for("dashboard_new_user"))
+
 
 # Whitelist of supported cities
 #SUPPORTED_CITIES = {('Vancouver','Canada')}
