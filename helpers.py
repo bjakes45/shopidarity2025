@@ -90,16 +90,17 @@ def find_similar_users(user_id):
 
     similar_users = []
     for user in all_users:
-        favs = current_user.shared_favorites(user)
-        rating_score = current_user.shared_ratings(user)
-        total_score = len(favs) + rating_score
-        dist = current_user.distance_from(user)
+    	if user.latitude and user.longitude:
+            favs = current_user.shared_favorites(user)
+            rating_score = current_user.shared_ratings(user)
+            total_score = len(favs) + rating_score
+            dist = current_user.distance_from(user)
 
-        if total_score >= 0:
-            user.similarity_score = total_score
-            user.dist = dist
-            user.shared_favorites_list = Product.query.filter(Product.upc.in_(favs)).all()
-            similar_users.append(user)
+            if total_score >= 0:
+            	user.similarity_score = total_score
+            	user.dist = dist
+            	user.shared_favorites_list = Product.query.filter(Product.upc.in_(favs)).all()
+            	similar_users.append(user)
 
     # Sort by score and paginate
     similar_users.sort(key=lambda u: u.similarity_score, reverse=True)
