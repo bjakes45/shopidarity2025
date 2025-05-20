@@ -469,11 +469,11 @@ def discover():
     total_pages = 1
     total_display = 0
 
-    similar_users  = ''
-    recommended_products = ''
-    potential_groups = ''
-    nearby_users = ''
-    nearby_deals = ''
+    similar_users  = []
+    recommended_products = []
+    potential_groups = []
+    nearby_users = []
+    nearby_deals = []
 
     def url_builder(p):
         return url_for('discover', tab=tab, page=p)
