@@ -18,9 +18,13 @@ faker = Faker()
 def get_client_ip():
     return request.remote_addr
 
-def enforce_rate_limit():
+def get_usage():
     ip = get_client_ip()
     usage = APIUsage.query.get(ip)
+    return usage
+
+def enforce_rate_limit(usage):
+    usage = usage
     now = datetime.utcnow()
 
     if usage:

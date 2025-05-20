@@ -12,7 +12,8 @@
     <input type="hidden" name="nutriments" placeholder="Nutrifacts" />
     <input type="hidden" name="offers" placeholder="Offers" />
     <input type="hidden" name="verified_by" placeholder="Verified_by" />
-
+    
+    <h2 name="remaining" id="remaining">Look ups Remaining: {{ usage.remaining if usage else 5}}</h2>
     <!-- UPC and Lookup -->
     <div class="flex items-center gap-2">
       <input
@@ -116,28 +117,31 @@
   }
 
   function formatOffers(offers) {
-    if (!offers || typeof offers !== 'object') return "<p class='text-gray-500'>No Offers data available.</p>";
-    const limitedOffers = offers.slice(0, 3);
-    let html = '<div class="space-y-4">';
-    for (const offer of limitedOffers) {
-      html += `
-      <div class="bg-white p-4 rounded-lg shadow text-sm text-gray-700">
-      <p><span class="font-medium text-gray-800">Merchant:</span> ${offer.merchant || 'N/A'}</p>
-      <p><span class="font-medium text-gray-800">Price:</span> ${offer.price ? `$${offer.price}` : 'N/A'}</p>
-      <p><span class="font-medium text-gray-800">Condition:</span> ${offer.condition || 'N/A'}</p>
-      <p><span class="font-medium text-gray-800">Link:</span> 
-      <a href="${offer.link}" target="_blank" class="text-blue-600 hover:underline">${offer.link}</a>
-      </p>
+  if (!offers || typeof offers !== 'object') return "<p class='text-gray-500'>No Offers data available.</p>";
+  const limitedOffers = offers.slice(0, 3);
+  let html = '<div class="space-y-4">';
+  for (const offer of limitedOffers) {
+    html += `
+      <div class="bg-white p-4 rounded-lg shadow text-sm text-gray-700 max-w-full overflow-x-auto">
+        <p><span class="font-medium text-gray-800">Merchant:</span> ${offer.merchant || 'N/A'}</p>
+        <p><span class="font-medium text-gray-800">Price:</span> ${offer.price ? `$${offer.price}` : 'N/A'}</p>
+        <p><span class="font-medium text-gray-800">Condition:</span> ${offer.condition || 'N/A'}</p>
+        <p>
+          <span class="font-medium text-gray-800">Link:</span> 
+          <a href="${offer.link}" target="_blank" class="text-blue-600 hover:underline break-all">URL Link</a>
+        </p>
       </div>`;
-    }
-    html += '</div>';
-    return html;
   }
+  html += '</div>';
+  return html;
+}
+
 
   async function lookupUPC(upc) {
     if (!upc) return;
     const statusDiv = document.getElementById("lookup-status");
     const lookupBtn = document.getElementById("lookup-btn");
+    const remaining = document.getElementById("remaining");
     const preInfo = document.getElementById("product-preview");
     const imageEl = document.getElementById("product-image");
     const nutrimentDiv = document.getElementById("nutriment-data");
@@ -145,6 +149,7 @@
 
     statusDiv.textContent = "Searching...";
     lookupBtn.classList.add("hidden")
+    remaining.classList.add("hidden")
 
     try {
       const res = await fetch(`/api/lookup-upc/${upc}`);

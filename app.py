@@ -35,6 +35,7 @@ from helpers import (
     seed_users_with_interactions,
     seed_deals,
     get_client_ip,
+    get_usage,
     enforce_rate_limit,
     get_paginated,
     faker
@@ -224,8 +225,7 @@ def product_comments(upc):
 #NEW PRODUCT
 @app.route('/products/new', methods=['GET', 'POST'])
 def new_product():
-    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
-
+    usage = get_usage()
     is_logged_in = current_user.is_authenticated
 
     upc = request.args.get('upc', '')  # Retrieve UPC query
@@ -328,7 +328,7 @@ def new_product():
     
         return redirect(url_for('product_detail', upc=upc))
 
-    return render_template('products/new_product.html', upc=upc)
+    return render_template('products/new_product.html', upc=upc, usage=usage)
 
 #DEAL DETAIL
 @app.route("/deal/<int:deal_id>")
@@ -549,8 +549,8 @@ def check_upc(upc):
 #API LOOKUP
 @app.route('/api/lookup-upc/<upc>')
 def lookup_upc(upc):
-
-    rate_limit_response = enforce_rate_limit()
+    usage = get_usage()
+    rate_limit_response = enforce_rate_limit(usage)
     if rate_limit_response:
         return jsonify({"error": "Rate limit exceeded"}), 404
     # Try Open Food Facts first
@@ -698,7 +698,7 @@ def dashboard_new_user():
             user = User(
                 username=username,
                 email=email,
-                password_hash=generate_password_hash(password),
+                password=generate_password_hash(password),
                 admin=is_admin
             )
             db.session.add(user)
@@ -750,6 +750,15 @@ def update_location():
     if lat and lon:
         current_user.latitude = lat
         current_user.longitude = lon
+
+        if current_user.city is None or current_user.country is None:
+            geolocator = Nominatim(user_agent="shopidarity")
+            location = geolocator.reverse(f"{lat}, {lon}", language='en')
+            address = location.raw.get('address', {})
+            city = (address.get('city') or address.get('town') or address.get('village') or '').strip().title()
+            country = (address.get('country') or '').strip().title()
+            current_user.city, current_user.country = city, country
+
         db.session.commit()
         return jsonify({"status": "success"}), 200
     return jsonify({"status": "failed"}), 400

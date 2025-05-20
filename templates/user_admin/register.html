@@ -2,6 +2,10 @@
 {% block title %}Register{% endblock %}
 {% block content %}
 
+<div id="location-loading" style="display:block;"class="text-red-600 font-medium">
+  <p id="loading">Loading...</p>
+</div>
+
 <div id="location-denied" style="display:none;" class="text-red-600 font-medium">
   <p id="city-denied"></p>
 </div>
@@ -56,7 +60,9 @@
       fetch(`/check-location?lat=${lat}&lon=${lon}`)
         .then(res => res.json())
         .then(data => {
+          
           if (data.allowed) {
+            document.getElementById("location-loading").style.display = "none";
             document.getElementById("registration-form").style.display = "block";
             if (data.user_count == 1) {
 	            document.getElementById("city-message").textContent = `There is already ${data.user_count} user in ${data.city}, ${data.country}.`;
@@ -69,6 +75,7 @@
             document.getElementById("hidden-lat").value = lat;
             document.getElementById("hidden-lon").value = lon;
           } else {
+            document.getElementById("location-loading").style.display = "none";
             document.getElementById("location-denied").style.display = "block";
             document.getElementById("city-denied").innerHTML = 
               `You're currently in ${data.city}, ${data.country}... We’re not publicly available there, yet.<br>

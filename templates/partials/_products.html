@@ -1,69 +1,70 @@
-{# _products.html #}
 {% macro render_products(products, current_user) %}
+  <ul class="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+    {% for product in products %}
+      <li class="border p-4 rounded-lg bg-white shadow-sm hover:shadow-md transition">
+        <!-- Image -->
+        <div class="mb-3">
+          <img
+            src="{{ product.image_url or '/static/default-product.png' }}"
+            alt="Product Image"
+            class="w-32 h-32 object-contain mx-auto"
+          />
+        </div>
 
-      <ul class="grid sm:grid-cols-3 md:grid-cols-4">
-        {% for product in products %}
+        <!-- Product name -->
+        <a href="{{ url_for('product_detail', upc=product.upc) }}"
+           class="block text-center text-base font-semibold text-gray-800 hover:underline mb-1">
+          {{ product.name[:29] ~ ('...' if product.name|length > 32 else '') }}
+        </a>
 
-          <li class="border m-3 p-2 rounded text-center bg-white shadow-sm">
-            <a href="{{ url_for('product_detail', upc=product.upc) }}" class="block text-md font-semibold mb-1">
-              {%if product.name|length < 32 %}{{ product.name }}{% else%}{{ product.name[:29]}}...{% endif %}
-            </a>
-            <p class="text-sm text-gray-600 mb-2">{{ product.category+' - ' if product.category}}{{ 'UPC' if product.upc|length > 5 else 'PLU' }}: {{ product.upc }}</p>
+        <!-- Category and UPC/PLU -->
+        <p class="text-center text-sm text-gray-600 mb-3">
+          {% if product.category %}{{ product.category }} – {% endif %}
+          {{ 'UPC' if product.upc|length > 5 else 'PLU' }}: {{ product.upc }}
+        </p>
 
-            <!-- Centered Inline Actions -->
-            <div class="flex flex-wrap justify-center items-center gap-2">
-            {% if current_user.is_authenticated %}
-              <!-- Favorite / Unfavorite -->
+        <!-- Controls and actions -->
+        <div class="space-y-2 text-sm">
+          {% if current_user.is_authenticated %}
+            <div class="flex justify-center flex-wrap gap-2">
+              <!-- Favorite Button -->
               {% set is_favorite = current_user.favorites | selectattr('product', 'equalto', product) | list | length > 0 %}
-              {% if is_favorite %}
-                <!-- Show unfavorite button -->
-                <form method="post" action="{{ url_for('unfavorite', upc=product.upc) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <form method="post" action="{{ url_for('unfavorite' if is_favorite else 'favorite', upc=product.upc) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="border px-2 py-1 rounded transition text-sm
+                               {{ 'border-red-600 text-red-600 hover:bg-red-50' if is_favorite else 'border-blue-600 text-blue-600 hover:bg-blue-50' }}">
+                  ❤️ {{ 'Remove Favorite' if is_favorite else 'Favorite' }}
+                </button>
+              </form>
 
-                  <button class="text-red-600 border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition text-sm">
-                    ❤️ Remove Favorite
-                  </button>
-                </form>
-              {% else %}
-                <!-- Show favorite button -->
-                <form method="post" action="{{ url_for('favorite', upc=product.upc) }}">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="text-blue-600 border border-blue-600 px-3 py-1 rounded hover:bg-blue-50 transition text-sm">
-                    ❤️ Favorite
-                  </button>
-                </form>
-              {% endif %}
- 
-              <!-- Rating Form -->
-              <form action="{{ url_for('rate', upc=product.upc) }}" method="POST" class="flex items-center space-x-1 text-sm">
+              <!-- Rating -->
+              <form method="post" action="{{ url_for('rate', upc=product.upc) }}"
+                    class="flex items-center space-x-1">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="product_upc" value="{{ product.upc }}">
                 <label for="rating_{{ product.upc }}" class="text-xs">Rate:</label>
                 {% set user_rating = product.get_rating(current_user) %}
-                <select name="score" id="rating_{{ product.upc }}" class="text-xs border rounded px-1 py-0.5">
+                <select name="score" id="rating_{{ product.upc }}"
+                        class="text-xs border rounded px-1 py-0.5">
                   <option value="">--</option>
                   {% for i in range(1, 6) %}
-                    <option value="{{ i }}"
-                      {% if user_rating and user_rating.score == i %}
-                        selected
-                      {% endif %}
-                    >{{ i }}</option>
+                    <option value="{{ i }}" {% if user_rating and user_rating.score == i %}selected{% endif %}>{{ i }}</option>
                   {% endfor %}
                 </select>
                 <button type="submit" class="text-xs text-green-600 hover:underline">✔</button>
               </form>
-              
-              {% endif %}
-              <!-- Average Rating -->
-              <div class="text-center mt-1">
-                <h3 class="font-medium text-sm">Average Rating:</h3>
-                <p class="text-yellow-600 text-lg">
-                  {{ "%.2f"|format(product.average_rating()) if product.average_rating is defined and product.average_rating() is not none else '–' }}
-                </p>
-              </div>
             </div>
-          </li>
-        {% endfor %}
+          {% endif %}
 
-      </ul>
+          <!-- Average Rating -->
+          <div class="text-center">
+            <h3 class="font-medium text-sm text-gray-700">Average Rating:</h3>
+            <p class="text-yellow-600 text-lg">
+              {{ "%.2f"|format(product.average_rating()) if product.average_rating is defined and product.average_rating() is not none else '–' }}
+            </p>
+          </div>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
 {% endmacro %}
