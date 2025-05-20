@@ -120,7 +120,7 @@
 						method: "POST",
 						headers: {
 							"Content-Type": "application/json",
-							"X-CSRFToken": "{{ csrf_token()|tojson }}"
+							"X-CSRFToken": "{{ csrf_token() }}"
 						},
 						body: JSON.stringify({
 							latitude: position.coords.latitude,
