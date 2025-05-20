@@ -3,6 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="csrf-token" content="{{ csrf_token() }}">
 
 	<title>{% block title %}Shopidarity{% endblock %}</title>
 	<link rel="shortcut icon" href="/static/shopidarity_favicon.ico" type="image/x-icon" />
@@ -112,7 +113,9 @@
 	setTimeout(() => {
 		document.querySelectorAll('#flash-messages > div').forEach(el => el.remove());
 	  }, 5000); // hides after 5 seconds
+
 	function updateLocation() {
+		const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 		if (navigator.geolocation) {
 			navigator.geolocation.getCurrentPosition(
 				position => {
@@ -120,7 +123,7 @@
 						method: "POST",
 						headers: {
 							"Content-Type": "application/json",
-							"X-CSRFToken": "{{ csrf_token() }}"
+							"X-CSRFToken": csrfToken
 						},
 						body: JSON.stringify({
 							latitude: position.coords.latitude,
