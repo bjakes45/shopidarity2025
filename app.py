@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, Response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, Response, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from models import db, User, Product, Rating, Favorite, Comment, ProductStatus, Deal, APIUsage
@@ -463,6 +463,10 @@ def reject_suggestion(product_upc):
 #DISCOVERY
 @app.route('/discover')
 def discover():
+    if not session.get("latitude") or not session.get("longitude"):
+        flash("Location services are required to use Discovery.", "warning")
+        return redirect(url_for("home"))  # or your homepage route name
+
     tab = request.args.get('tab', 'deals')  # default to 'deals'
     page = request.args.get('page', 1, type=int)
 
@@ -787,6 +791,7 @@ def update_location():
         current_user.latitude = lat
         current_user.longitude = lon
 
+
         if current_user.city is None or current_user.country is None:
             geolocator = Nominatim(user_agent="shopidarity")
             location = geolocator.reverse(f"{lat}, {lon}", language='en')
@@ -796,7 +801,12 @@ def update_location():
             current_user.city, current_user.country = city, country
 
         db.session.commit()
+
+    if lat is not None and lon is not None:
+        session["latitude"] = lat
+        session["longitude"] = lon
         return jsonify({"status": "success"}), 200
+
     return jsonify({"status": "failed"}), 400
 
 
