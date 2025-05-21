@@ -2,20 +2,6 @@
 {% block title %}Product {{ product.upc }}{% endblock %}
 
 {% block detail %}
-<div id="info" class="flex items-start">
-  <div class="mr-6">
-    {% if product.image_url %}
-      <img src="{{ product.image_url }}" id="image-url" class="w-48 mb-2" alt="Product Image" />
-    {% else %}
-      <p class="italic text-gray-400">No image available</p>
-    {% endif %}
-  </div>
-
-  <div class="pt-2">
-    <p class="text-lg font-semibold">{{ product.name }}</p>
-    <p class="text-gray-600">{{ product.upc }}</p>
-  </div>
-</div>
 
 <div id="comments-data" class="text-sm text-gray-700 mt-4">
 	

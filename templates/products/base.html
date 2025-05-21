@@ -121,7 +121,26 @@
   </aside>
 
   <!-- Main Content -->
-  <main class="flex-1 overflow-y-auto lg:overflow-y-visible p-6 space-y-10">
+  <main class="flex-1 overflow-y-auto lg:overflow-y-auto p-6 space-y-10">
+    <div id="info" class="flex flex-col sm:flex-row items-center sm:items-start sm:gap-6 mb-4">
+      <div class="mb-4 sm:mb-0">
+        {% if product.image_url %}
+        <img src="{{ product.image_url }}" id="image-url" class="w-40 sm:w-48 mx-auto sm:mx-0" alt="Product Image" />
+        {% else %}
+        <img src="/static/default-product.png" id="image-url" class="w-40 sm:w-48 mx-auto sm:mx-0" alt="Default Product Image" />
+        {% endif %}
+      </div>
+
+      <div class="text-center sm:text-left">
+        <p class="text-xl font-semibold">{{ product.name }}</p>
+        <p class="text-gray-600">{{ product.upc }}</p>
+        {% set avg = product.average_price() %}
+        {% if avg %}
+        Average Price - 
+        <span class="font-bold">${{ "%.2f"|format(avg) }}</span>
+        {% endif %}
+      </div>
+    </div>
     {% block detail %}{% endblock %}
   </main>
 

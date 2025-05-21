@@ -2,25 +2,9 @@
 {% block title %}Product {{ product.upc }}{% endblock %}
 
 {% block detail %}
-<div id="info" class="flex">
-  <aside>
-    {% if product.image_url %}
-      <img src="{{ product.image_url }}" id="image-url" class="w-48 mb-2" alt="Product Image" />
-    {% else %}
-      <p class="italic text-gray-400">No image available</p>
-    {% endif %}
-  </aside>
 
-  <p>
-  	<strong>{{ product.name }}</strong><br> 
-  	{{ product.upc }}<br>
-  	{% set avg = product.average_price() %}
-  	{% if avg %}
-  		Average Price - 
-          <span class="font-bold">${{ "%.2f"|format(avg) }}</span>
-  	{% endif %}
-  </p>
-</div>
+{% set avg = product.average_price() %}
+
 
 {% if product.deals %}
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

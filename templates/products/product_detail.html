@@ -3,22 +3,6 @@
 
 {% block detail %}
 
-<div id="info" class="flex flex-col sm:flex-row items-center sm:items-start sm:gap-6 mb-4">
-  <div class="mb-4 sm:mb-0">
-    {% if product.image_url %}
-      <img src="{{ product.image_url }}" id="image-url" class="w-40 sm:w-48 mx-auto sm:mx-0" alt="Product Image" />
-    {% else %}
-      <img src="/static/default-product.png" id="image-url" class="w-40 sm:w-48 mx-auto sm:mx-0" alt="Default Product Image" />
-    {% endif %}
-  </div>
-
-  <div class="text-center sm:text-left">
-    <p class="text-xl font-semibold">{{ product.name }}</p>
-    <p class="text-gray-600">{{ product.upc }}</p>
-  </div>
-</div>
-
-
   {% if current_user.is_authenticated %}
     <!-- Add Comment Form -->
     <form method="post" action="{{ url_for('add_comment', upc=product.upc) }}" class="mt-4">

@@ -30,6 +30,7 @@ class User(db.Model, UserMixin):
     #SCHEMA RELATIONSHIPS
     favorites = db.relationship('Favorite', back_populates='user', cascade='all, delete-orphan')
     ratings = db.relationship('Rating', back_populates='user', cascade='all, delete-orphan')
+    comments = db.relationship('Comment', back_populates='user', cascade='all, delete-orphan')
     deals = db.relationship('Deal', back_populates='user')
     
     #METHODS
@@ -177,6 +178,7 @@ class Comment(db.Model):
     is_public = db.Column(db.Boolean, default=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+    user = db.relationship('User', back_populates='comments')
     product = db.relationship('Product', backref='comments')
 
 class Deal(db.Model):

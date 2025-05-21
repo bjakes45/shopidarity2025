@@ -554,7 +554,8 @@ def check_upc(upc):
 #API LOOKUP
 @app.route('/api/lookup-upc/<upc>')
 def lookup_upc(upc):
-    usage = get_usage()
+    ip = get_client_ip()
+    usage = get_usage(ip)
     rate_limit_response = enforce_rate_limit(usage)
     if rate_limit_response:
         return jsonify({"error": "Rate limit exceeded"}), 404
@@ -746,7 +747,8 @@ def delete_user():
 @app.route('/user_detail/<user_id>')
 @login_required
 def user_detail(user_id):
-    return render_template("user/user_detail.html")
+    user = User.query.filter_by(id=user_id).first()
+    return render_template("user/user_detail.html", user=user)
 
 # Whitelist of supported cities
 #SUPPORTED_CITIES = {('Vancouver','Canada')}
@@ -846,6 +848,13 @@ def unfavorite(upc):
     Favorite.query.filter_by(user_id=current_user.id, product_upc=upc).delete()
     db.session.commit()
     return redirect(request.referrer or url_for('index'))
+
+@app.route('/deal/<deal_id>/carts')
+@login_required
+def deal_carts(deal_id):
+    deal = Deal.query.filter_by(id=deal_id).first()
+    return render_template('deals/deal_carts.html', deal=deal)
+
 
 @app.route('/cart_detail/<cart_id>', methods=['POST'])
 @login_required

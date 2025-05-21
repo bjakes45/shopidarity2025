@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Discover{% endblock %}
+
+{% block content %}
+<body>
+  <h1>Collective Carts for Deal {{ deal.id }}</h1>
+  <h2>Product: {{ deal.product.name if deal.product else 'Unknown' }}</h2>
+  
+  {% if deal.collective_carts %}
+    <ul>
+      {% for cart in deal.collective_carts %}
+        <li>
+          <strong>Cart ID:</strong> {{ cart.id }}<br />
+          <strong>Owner:</strong> {{ cart.owner.username if cart.owner else 'Anonymous' }}<br />
+          <strong>Items Count:</strong> {{ cart.items|length }}<br />
+          <strong>Status:</strong> {{ cart.status }}<br />
+          <strong>Created At:</strong> {{ cart.created_at.strftime('%Y-%m-%d %H:%M') }}<br />
+          <!-- Add other relevant cart info here -->
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No collective carts currently available for this deal.</p>
+  {% endif %}
+
+  <a href="{{ url_for('product_deals', upc=deal.product.upc) }}">Back to Deals</a>
+  {% endblock %}

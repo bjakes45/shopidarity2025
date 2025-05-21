@@ -29,9 +29,15 @@
 
   <!-- Call to Action -->
   <div class="text-center mt-10">
+    {% if current_user.is_authenticated %}
     <a href="{{ url_for('create_cart', deal_id=deal.id)}}" 
        class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-semibold px-8 py-4 rounded-xl shadow-lg transition duration-200">
-      🛒 {% if current_user.is_authenticated %}Host{% else %}Join{% endif %} a Collective Cart
+      🛒 Host a Collective Cart
+    </a>
+    {% endif %}
+    <a href="{{ url_for('deal_carts', deal_id=deal.id)}}" 
+       class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-semibold px-8 py-4 rounded-xl shadow-lg transition duration-200">
+      🛒 Join a Collective Cart
     </a>
     <p class="mt-2 text-gray-500 text-sm">
       Coordinate with others to buy this deal together!
