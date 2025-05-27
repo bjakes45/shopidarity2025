@@ -347,9 +347,12 @@ def new_product():
             user_id=user_id
         )
         db.session.add(new_product)
-        result = evaluate_badge_progress(current_user, 'hunter', increment=1, explicit_progress=len(current_user.products))
-        if result:
-            session['new_badge_earned'] = result
+        db.session.flush()
+        if current_user.is_authenticated:
+          result = evaluate_badge_progress(current_user, 'hunter', increment=1, explicit_progress=len(current_user.products))
+          if result:
+              session['new_badge_earned'] = result
+      
         db.session.flush()
 
         for offer in offers:
@@ -590,43 +593,106 @@ def dashboard_reports():
     if not current_user.admin:
         flash("Must be an Admin", 'error')
         return redirect(url_for("dashboard"))
-
     # Flagged Products: products with 0-rated scores
+    from sqlalchemy.dialects.postgresql import array_agg
+
     flagged_products = (
         db.session.query(
-            Product,
+            Product.name,
+            Product.upc,
+            Product.user_id,
             func.count(Rating.id).label('flag_count')
         )
         .join(Rating, Rating.product_upc == Product.upc)
-        .filter(Rating.score == 0)
-        .group_by(Product)
+        .filter(Rating.score == 0, Rating.product_upc != None)
+        .group_by(Product.name, Product.upc, Product.user_id)
         .order_by(func.count(Rating.id).desc())
         .all()
     )
 
-    # Flagged Deals: deals with 0-rated scores
+    user_reports = (
+        db.session.query(
+            Rating.product_upc,
+            Rating.user_id
+        )
+        .filter(Rating.score == 0, Rating.product_upc != None)
+        .all()
+    )
+
+    # Group into dict: upc → set of user_ids
+    from collections import defaultdict
+
+    reporting_users_by_upc = defaultdict(set)
+    for upc, user_id in user_reports:
+        reporting_users_by_upc[upc].add(user_id)
+
+
+
+    product_flags = [
+        {
+            'product': {
+                'name': name,
+                'upc': upc,
+                'user_id': creator_user_id
+            },
+            'flag_count': flag_count,
+            'reporting_user_ids': list(reporting_users_by_upc.get(upc, []))
+        }
+        for name, upc, creator_user_id, flag_count in flagged_products
+    ]
+
+
+
+    from sqlalchemy.orm import joinedload
+
+    # 1. Flagged Deals with product info
     flagged_deals = (
         db.session.query(
-            Deal,
-            func.count(Rating.id).label('flag_count')
+            Deal.id,
+            Deal.price,
+            Deal.user_id,
+            Product.name.label('product_name'),
+            func.count(Rating.id).label('flag_count'),
         )
         .join(Rating, Rating.deal_id == Deal.id)
-        .filter(Rating.score == 0)
-        .group_by(Deal)
+        .join(Product, Product.upc == Deal.product_id)
+        .filter(Rating.score == 0, Rating.deal_id != None)
+        .group_by(Deal.id, Deal.price, Deal.user_id, Product.name)
         .order_by(func.count(Rating.id).desc())
         .all()
     )
 
-    # Already have full objects in results (Product, Deal), no need to re-fetch
-    product_flags = [
-        {'product': product, 'flag_count': flag_count}
-        for product, flag_count in flagged_products
+    # 2. User reports (who flagged which deal)
+    user_deal_reports = (
+        db.session.query(
+            Rating.deal_id,
+            Rating.user_id
+        )
+        .filter(Rating.score == 0, Rating.deal_id != None)
+        .all()
+    )
+    print(user_deal_reports)
+    # 3. Group user_ids by deal_id
+    reporting_users_by_deal_id = defaultdict(set)
+    for deal_id, user_id in user_deal_reports:
+        reporting_users_by_deal_id[deal_id].add(user_id)
+
+    # 4. Combine into final structure
+    deal_flags = [
+        {
+            'deal': {
+                'id': int(deal_id),
+                'price': price,
+                'product_name': product_name,
+                'user_id': creator_user_id
+            },
+            'flag_count': flag_count,
+            'reporting_user_ids': list(reporting_users_by_deal_id.get(str(deal_id), []))
+        }
+        for deal_id, price, creator_user_id, product_name, flag_count in flagged_deals
     ]
 
-    deal_flags = [
-        {'deal': deal, 'flag_count': flag_count}
-        for deal, flag_count in flagged_deals
-    ]
+            
 
     return render_template(
         'dashboard/reports.html',
