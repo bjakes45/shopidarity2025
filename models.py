@@ -412,7 +412,7 @@ class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     organizer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  
-    product_upc = db.Column(db.Integer, db.ForeignKey('product.upc'), nullable=True)
+    product_upc = db.Column(db.String, db.ForeignKey('product.upc'), nullable=True)
     product = db.relationship('Product', backref='groups')
 
     # Represent turf as a central lat/lon and radius (in km)
