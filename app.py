@@ -1056,7 +1056,9 @@ def favorite(upc):
     product = Product.query.get_or_404(upc)
 
     db.session.add(Favorite(user_id=current_user.id, product_upc=upc, to_alert=current_user.default_fav_alert))
-    result =evaluate_badge_progress(current_user, 'pantry', increment=1, explicit_progress=len(current_user.favorites))
+    db.session.flush()
+    fav_count = db.session.query(Favorite).filter_by(user_id=current_user.id).count()
+    result = evaluate_badge_progress(current_user, 'pantry', increment=1, explicit_progress=fav_count)
     if result:
         session['new_badge_earned'] = result
     if product.user and product.user.id != current_user.id:
