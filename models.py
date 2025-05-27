@@ -251,7 +251,7 @@ class Rating(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     product_upc = db.Column(db.String, db.ForeignKey('product.upc'), nullable=True)
-    deal_id = db.Column(db.String, db.ForeignKey('deal.id'), nullable=True)
+    deal_id = db.Column(db.Integer, db.ForeignKey('deal.id'), nullable=True)
     
     product = db.relationship('Product', backref='ratings', lazy='joined')
     deal = db.relationship('Deal', backref='ratings', lazy='joined')
