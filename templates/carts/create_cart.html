@@ -1,1 +1,260 @@
-create_cart.html
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-2xl mx-auto mt-8 bg-white p-6 rounded-xl shadow-lg">
+	<h1 class="text-2xl font-bold text-gray-800 mb-4">Collective Cart for {{ deal.product.name }}</h1>
+
+	<div class="mb-4 text-gray-600 space-y-1">
+		<p><strong>Price:</strong> ${{ deal.price }}</p>
+		<p><strong>{{'Store:' if deal.store else 'URL'}}</strong> {{ deal.store if deal.store else deal.url }}</p>
+
+		<p>
+			<strong>Location:</strong>
+			{% if deal.latitude and deal.longitude %}
+			({{ deal.latitude }}, {{ deal.longitude }})
+			{% else %}
+			<em>Not specified</em>
+			{% endif %}
+		</p>
+		{% if deal.expiry %}
+		<p class="text-red-600 font-medium">
+			<strong>Expires on:</strong> {{ deal.expiry.strftime('%Y-%m-%d %H:%M') }}
+		</p>
+		{% endif %}
+	</div>
+
+	<!-- Share Preview -->
+	<div id="share_preview"
+	class="mt-6 bg-gray-100 p-4 rounded-md shadow-inner border border-gray-300 text-gray-800">
+	<h2 class="text-lg font-semibold mb-2">📦 Share Summary</h2>
+	<div class="grid grid-cols-2 gap-2 text-sm">
+		<p><strong>Total Cost:</strong> <span id="total_cost_preview">$0.00</span></p>
+		<p><strong>Price per Share:</strong> <span id="share_cost_preview">$0.00</span></p>
+	</div>
+</div>
+
+<form method="POST" class="space-y-4 mt-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token()}}">
+	<!-- Share Count & Tax -->
+	<div class="flex space-x-4">
+		<div class="w-1/2">
+			<label for="share_count" class="block text-sm text-gray-600"># of Shares</label>
+			<input type="number" name="share_count" id="share_count" value="1" min="1" max="25"
+			class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
+		</div>
+
+		<div class="w-1/2">
+			<label class="block text-sm text-gray-600 mb-1">Add Tax?</label>
+			<div class="flex items-center space-x-2">
+				<input type="checkbox" name="add_tax" id="add_tax" class="rounded border-gray-300">
+				<span class="text-gray-700 text-sm">Yes</span>
+
+				<!-- Wrap tax input & % label together -->
+				<div id="tax_rate_wrapper" class="relative inline-flex items-center hidden">
+					<input type="number" step="1" name="tax_rate" id="tax_rate" value="0" min="0"
+					class="w-20 border rounded-md px-2 py-1 pr-6 focus:outline-none focus:ring focus:border-blue-300">
+					<span class="absolute right-2 text-gray-500 text-sm">%</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Privacy & Pickup Location -->
+	<div class="flex space-x-4 mt-4">
+		<div class="w-1/2">
+			<label for="privacy" class="block text-sm text-gray-600">Privacy</label>
+			<select name="privacy" id="privacy"
+			class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
+			<option value="public">Public</option>
+			<option value="user_only">Only Me</option>
+			<option value="group_only">My Groups</option>
+		</select>
+	</div>
+	<div class="w-1/2">
+		<label for="pickup_location" class="block text-sm text-gray-600 font-medium">Pickup Location</label>
+		<select name="pickup_location" id="pickup_location"
+		class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
+		<option value="deal">Use Deal Location</option>
+		<option value="current">Use Your Current Location</option>
+		<option value="other">Select Other Location</option>
+	</select>
+</div>
+</div>
+
+
+<!-- Map Picker for Custom Location -->
+<div id="map_picker_container" class="hidden mt-4">
+	<label for="map" class="block font-semibold text-sm text-gray-700 mb-1">Pin a Pickup Location:</label>
+	<div id="map" class="w-full h-64 rounded border" role="region" aria-label="Map to select pickup location"></div>
+	<input type="hidden" id="location-lat" name="location_lat" aria-hidden="true">
+	<input type="hidden" id="location-lng" name="location_lng" aria-hidden="true">
+</div>
+
+<!-- Pickup Date and Time (Inline) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+	<div>
+		<label for="pickup_date" class="block text-sm text-gray-600 font-medium">Pickup Date</label>
+		<input type="date" name="pickup_date" id="pickup_date"
+		class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
+	</div>
+	<div>
+		<label for="pickup_time" class="block text-sm text-gray-600 font-medium">Pickup Time</label>
+		<input type="time" name="pickup_time" id="pickup_time"
+		class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
+	</div>
+</div>
+
+
+<!-- Payment Options -->
+<div class="flex space-x-4">
+	<div class="w-1/2">
+		<label for="payment_timing" class="block text-sm text-gray-600">Payment Timing</label>
+		<select name="payment_timing" id="payment_timing"
+		class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
+		<option value="upfront">Upfront</option>
+		<option value="delivery">On Delivery</option>
+	</select>
+</div>
+<div class="w-1/2">
+	<label for="payment_method" class="block text-sm text-gray-600">Payment Method</label>
+	<select name="payment_method" id="payment_method"
+	class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
+	<option value="cash">Cash</option>
+	<option value="etransfer">eTransfer</option>
+	<option value="venmo">Venmo</option>
+</select>
+</div>
+</div>
+
+<!-- Host Share and Max Shares per Participant -->
+<div class="flex space-x-4 mt-4">
+    <div class="w-1/2">
+        <label for="host_shares" class="block text-sm text-gray-600">Host Shares</label>
+        <input type="number" name="host_shares" id="host_shares" value="1" min="0"
+               class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
+        <p class="text-xs text-gray-500 mt-1">How many shares the host is keeping for themselves.</p>
+    </div>
+    <div class="w-1/2">
+        <label for="max_shares_per_user" class="block text-sm text-gray-600">Max Shares per Participant</label>
+        <input type="number" name="max_shares_per_user" id="max_shares_per_user" value="1" min="1"
+               class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
+        <p class="text-xs text-gray-500 mt-1">Limit how many shares a single person can claim.</p>
+    </div>
+</div>
+
+<!-- Additional Info from Host -->
+<div class="mt-4">
+	<label for="host_notes" class="block text-sm text-gray-600 font-medium">
+		Deal Description and Other Info:
+	</label>
+	<textarea id="host_notes" name="host_notes" rows="4"
+	class="w-full mt-1 border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300"
+	placeholder="E.g. 6 cans per share. Please bring your own containers. etc...">
+</textarea>
+</div>
+<!-- Warning Box -->
+<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 rounded-md text-sm space-y-1">
+	<strong class="block font-semibold">Important:</strong>
+	<ul class="list-disc list-inside space-y-1">
+		<li><strong>Once submitted, you cannot edit the share cost.</strong></li>
+		<li>You may withdraw the cart if the final price is different than expected.</li>
+		<li>Continuing at a higher price means the host pays the difference.</li>
+		<li>Cancelling after others have joined may affect your reputation as a host.</li>
+		<li>Consider donating any excess funds to Shopidarity to support the platform.</li>
+	</ul>
+</div>
+
+
+
+<!-- Acknowledgment -->
+<div class="mt-4">
+	<label class="inline-flex items-start space-x-2 text-sm text-gray-700">
+		<input type="checkbox" name="acknowledge_risk" required class="mt-1">
+		<span>I have read the warnings and accept the risks involved in hosting this cart.</span>
+	</label>
+</div>
+
+<!-- Submit Button -->
+<button type="submit" id="submit_button" disabled
+class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mt-2">
+Create Cart
+</button>
+</form>
+</div>
+
+<!-- JS Logic -->
+<script>
+	const basePrice = {{ deal.price|round(2) }};
+	function updatePreview() {
+	const taxCheckbox = document.getElementById('add_tax');
+	const taxRateWrapper = document.getElementById('tax_rate_wrapper');
+	const taxRateInput = document.getElementById('tax_rate');
+	const shareCount = parseInt(document.getElementById('share_count').value) || 1;
+
+	// Show or hide the whole tax input group
+	taxRateWrapper.classList.toggle('hidden', !taxCheckbox.checked);
+
+	const taxRate = parseFloat(taxRateInput.value) || 0;
+	let totalCost = basePrice;
+	if (taxCheckbox.checked) {
+		totalCost *= (1 + taxRate / 100);
+	}
+
+	const perShare = totalCost / shareCount;
+	document.getElementById('total_cost_preview').textContent = `$${totalCost.toFixed(2)}`;
+	document.getElementById('share_cost_preview').textContent = `$${perShare.toFixed(2)}`;
+}
+
+
+	document.getElementById('add_tax').addEventListener('change', updatePreview);
+	document.getElementById('tax_rate').addEventListener('input', updatePreview);
+	document.getElementById('share_count').addEventListener('input', updatePreview);
+	updatePreview();
+</script>
+
+<script>
+	const checkbox = document.querySelector('input[name="acknowledge_risk"]');
+	const submitBtn = document.getElementById('submit_button');
+
+	checkbox.addEventListener('change', function () {
+		submitBtn.disabled = !this.checked;
+	});
+</script>
+
+<script>
+	document.addEventListener("DOMContentLoaded", () => {
+		const lat = {{ current_user.latitiude | default(49.2350654) }};
+		const lng = {{ current_user.longitude | default(-123.025867) }};
+
+		const mapContainer = document.getElementById('map_picker_container');
+		const locationSelector = document.getElementById('pickup_location');
+
+		let map, marker;
+
+		locationSelector.addEventListener('change', function () {
+			if (this.value === 'other') {
+				mapContainer.classList.remove('hidden');
+
+				// Lazy init map if needed
+				if (!map) {
+					map = L.map('map').setView([lat, lng], 13);
+
+					L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+						attribution: '&copy; OpenStreetMap contributors'
+					}).addTo(map);
+
+					map.on('click', (e) => {
+						const { lat, lng } = e.latlng;
+						if (marker) marker.remove();
+						marker = L.marker([lat, lng]).addTo(map).bindPopup("Selected pickup location").openPopup();
+						document.getElementById('location-lat').value = lat;
+						document.getElementById('location-lng').value = lng;
+					});
+				}
+			} else {
+				mapContainer.classList.add('hidden');
+			}
+		});
+	});
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "dashboard/base.html" %}
+{% block dashboard %}
+<section id="carts" class="p-4 space-y-8">
+
+	<!-- My Collective Carts -->
+	<div>
+		<h3 class="text-2xl font-bold mb-4 text-gray-800">My Collective Carts</h3>
+		{% if carts %}
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			{% for cart in carts %}
+			<div class="bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow p-5 border border-gray-100">
+				<a href="{{ url_for('cart_detail', cart_id=cart.id) }}" class="block text-xl font-semibold text-blue-700 hover:underline mb-2">
+					{{ cart.deal.product.name }}
+				</a>
+				<div class="text-sm text-gray-600 space-y-1">
+					<p><span class="font-medium">Status:</span> {{ 'Fulfilled' if cart.is_fulfilled else 'Open'}}</p>
+					<p><span class="font-medium">Created:</span> {{ cart.created_at.strftime('%b %d, %Y') }}</p>
+					<p><span class="font-medium">Total Shares:</span> {{ cart.shares|length }}</p>
+					<p><span class="font-medium">Approved Shares:</span> {{ cart.shares | selectattr("approved") | list | length }}</p>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+		{% else %}
+		<p class="text-gray-500">You aren't hosting any carts yet.</p>
+		{% endif %}
+	</div>
+
+	<!-- My Shares -->
+	<div>
+		<h3 class="text-2xl font-bold mb-4 text-gray-800">My Shares</h3>
+		{% if shares %}
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			{% for cart_id, share in shares.items() %}
+			<div class="bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow p-5 border border-gray-100">
+				<a href="{{ url_for('cart_detail', cart_id=cart_id) }}" class="block text-xl font-semibold text-blue-700 hover:underline mb-2">
+					{{ share.cart.deal.product.name }}
+				</a>
+				<div class="text-sm text-gray-600 space-y-1">
+					<p><span class="font-medium">Cart Host:</span> {{ share.cart.host.username if share.cart.host else "Anonymous" }}</p>
+					<p><span class="font-medium">Shares Requested:</span> {{ shares_count[share.cart_id] }}</p>
+					<p><span class="font-medium">Status:</span> {{ 'Approved' if share.approved else 'Pending'}}</p>
+				</div>
+			</div>
+			{% endfor %}
+		</div>
+		{% else %}
+		<p class="text-gray-500">You haven't requested any shares from other user's carts yet.</p>
+		{% endif %}
+	</div>
+
+</section>
+{% endblock %}

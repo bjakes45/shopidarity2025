@@ -1,18 +1,193 @@
 {% extends "dashboard/base.html" %}
 {% block dashboard %}
-	<!-- Favorites -->
-	<section id="favorites">
-	  <h3 class="text-2xl font-bold mb-4">My Favorites</h3>
-	  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-	    {% for fav in favorites %}
-	      <div class="bg-white p-4 rounded-xl shadow hover:shadow-md">
-	        <a href="{{ url_for('product_detail', upc=fav.product.upc) }}" class="text-lg font-semibold text-blue-700 hover:underline">
-	          {{ fav.product.name }}
-	        </a>
-	      </div>
-	    {% else %}
-	      <p>No favorites yet.</p>
-	    {% endfor %}
-	  </div>
-	</section>
+
+{% from "partials/_pagination.html" import render_pagination %}
+
+
+
+<!-- Header: Title + Search + Settings -->
+<div class="flex flex-col gap-4">
+
+  <!-- Top Row: Title + Settings Cog -->
+  <div class="flex items-center justify-between">
+    <h3 class="text-2xl font-bold">My Favorites</h3>
+    <div class="relative">
+      <button id="settingsToggle" class="text-gray-600 text-xl">
+        <i class="fas fa-cog"></i>
+      </button>
+
+      <!-- Dropdown Panel -->
+      <div id="settingsDropdown"
+           class="absolute right-0 mt-2 w-80 bg-white rounded shadow-lg border p-4 z-50 hidden">
+        {% include 'partials/settings_content.html' %}
+      </div>
+    </div>
+  </div>
+
+  <div class="flex justify-center">
+    <form method="get"
+          action="{{ url_for('dashboard_favorites') }}"
+          class="flex items-center gap-2 w-full max-w-md">
+      <input type="text"
+             name="q"
+             value="{{ request.args.get('q', '') }}"
+             placeholder="Search favorites..."
+             class="border px-3 py-2 rounded w-full" />
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        Search
+      </button>
+    </form>
+  </div>
+
+</div>
+
+  <!-- Favorites -->
+  <section id="favorites" class="mt-4">
+    <ul class="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+  {% for fav in favorites.items %}
+    {% set product = fav.product %}
+    <li class="border p-4 rounded-lg bg-white shadow-sm hover:shadow-md transition">
+
+      <!-- Image -->
+      <div class="mb-3">
+        <img
+          src="{{ product.image_url or '/static/default-product.png' }}"
+          alt="Product Image"
+          class="w-32 h-32 object-contain mx-auto"
+          onerror="this.onerror=null; this.src='/static/default-product.png';"
+        />
+      </div>
+
+      <!-- Product name -->
+      <a href="{{ url_for('product_detail', upc=product.upc) }}"
+         class="block text-center text-base font-semibold text-gray-800 hover:underline mb-1">
+        {{ product.name[:29] ~ ('...' if product.name|length > 32 else '') }}
+      </a>
+
+      <!-- Category and UPC/PLU -->
+      <p class="text-center text-sm text-gray-600 mb-3">
+        {% if product.category %}{{ product.category }} – {% endif %}
+        {{ 'UPC' if product.upc|length > 5 else 'PLU' }}: {{ product.upc }}
+      </p>
+
+      <!-- Actions: Unfavorite + Alert Toggle -->
+      <div class="flex justify-center items-center flex-wrap gap-3 text-sm mt-4">
+        <!-- Unfavorite -->
+        <form method="post" action="{{ url_for('unfavorite', upc=product.upc) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="border border-red-600 text-red-600 hover:bg-red-50 px-3 py-1 rounded">
+            ❤️ Remove Favorite
+          </button>
+        </form>
+
+        <!-- Alert Toggle (working version) -->
+        <label for="alertToggle-{{ fav.id }}" class="inline-flex items-center cursor-pointer ml-2">
+          <span class="mr-2 text-sm font-medium">Get Alerts</span>
+          <input type="checkbox"
+                 id="alertToggle-{{ fav.id }}"
+                 class="alert-toggle-checkbox"
+                 data-favorite-id="{{ fav.id }}"
+                 {% if fav.to_alert %}checked{% endif %} />
+        </label>
+      </div>
+
+    </li>
+  {% endfor %}
+</ul>
+{{ render_pagination(favorites.page, favorites.pages, url_builder) }}
+
+  </section>
+
+  <script>
+    // Handle default alert toggle change
+    document.getElementById('defaultAlertToggle').addEventListener('change', async (event) => {
+      const isChecked = event.target.checked;
+      try {
+        const res = await fetch('/users/default_alert', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({default_fav_alert: isChecked})
+        });
+        if (!res.ok) throw new Error('Failed to update default alert setting');
+      } catch (err) {
+        alert(err.message);
+        // revert checkbox if error
+        event.target.checked = !isChecked;
+      }
+    });
+
+    // Handle alert toggles for each favorite
+    document.querySelectorAll('.alert-toggle-checkbox').forEach(toggle => {
+      toggle.addEventListener('change', async (event) => {
+        const favoriteId = event.target.dataset.favoriteId;
+        try {
+          const res = await fetch(`/favorites/${favoriteId}/toggle_alert`, {method: 'POST'});
+          if (!res.ok) throw new Error('Failed to toggle alert');
+          const data = await res.json();
+          event.target.checked = data.to_alert; // sync UI
+        } catch (err) {
+          alert(err.message);
+          event.target.checked = !event.target.checked; // revert on error
+        }
+      });
+    });
+
+    // Handle unfavorite button clicks
+    document.querySelectorAll('.unfavorite-btn').forEach(button => {
+      button.addEventListener('click', async (event) => {
+        const favoriteId = event.target.dataset.favoriteId;
+        if (!confirm('Are you sure you want to remove this favorite?')) return;
+        try {
+          const res = await fetch(`/favorites/${favoriteId}/unfavorite`, {method: 'POST'});
+          if (!res.ok) throw new Error('Failed to unfavorite');
+          // Remove card from DOM
+          event.target.closest('div.bg-white').remove();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+  </script>
+  <script>
+document.getElementById("deal-distance").addEventListener("change", function () {
+  const distance = this.value;
+
+  fetch("/settings/update-deal-distance", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ deal_distance: distance }),
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        const status = document.getElementById("distance-status");
+        status.classList.remove("hidden");
+        setTimeout(() => status.classList.add("hidden"), 2000);
+      }
+    });
+});
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('settingsToggle');
+    const dropdown = document.getElementById('settingsDropdown');
+
+    if (toggleBtn && dropdown) {
+      toggleBtn.addEventListener('click', () => {
+        dropdown.classList.toggle('hidden');
+      });
+
+      // Optional: close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target) && !toggleBtn.contains(e.target)) {
+          dropdown.classList.add('hidden');
+        }
+      });
+    }
+  });
+</script>
+
+
 {% endblock %}

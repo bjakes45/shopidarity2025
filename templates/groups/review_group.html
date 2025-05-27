@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
+  <h2 class="text-2xl font-bold mb-6 text-gray-800">Review Group Invitations</h2>
+
+  <form action="{{ url_for('create_group') }}" method="post" class="space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() | safe }}">
+    <input type="hidden" name="product_upc" value="{{ product.upc }}">
+
+    <!-- Product Info -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-600 mb-1">Favorite Product</label>
+      <p class="text-md text-gray-800">{{ product.name }}</p>
+    </div>
+
+    <!-- Group Name -->
+    <div>
+      <label for="group_name" class="block text-sm font-semibold text-gray-600 mb-1">Group Name</label>
+      <input type="text" name="group_name" id="group_name" required
+             placeholder="e.g. South Vancouver - Bick's Dill Pickle Lovers"
+             class="w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+    </div>
+
+    <!-- User Invitations -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-600 mb-2">Invite Members</label>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for user in users %}
+        <div class="flex items-center space-x-3 bg-gray-50 p-3 rounded border">
+          <input type="checkbox" name="user_ids" value="{{ user.id }}" id="user_{{ user.id }}" checked
+                 class="h-4 w-4 text-green-600 border-gray-300 rounded">
+          <label for="user_{{ user.id }}" class="flex items-center space-x-3 cursor-pointer">
+            <img src="{{ user.avatar_url or url_for('static', filename='default-avatar-256.png') }}"
+                 alt="{{ user.username }} avatar"
+                 class="w-9 h-9 rounded-full object-cover border shadow-sm">
+            <span class="text-sm text-gray-800">{{ user.username }}</span>
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Group Zone Map -->
+    <div>
+      <label class="block text-sm font-semibold text-gray-600 mb-2">Group Zone</label>
+
+      <div class="mb-2">
+        <label for="group_radius" class="block text-sm text-gray-700">Zone Radius (km)</label>
+        <input type="number" id="group_radius" name="radius_km" min="1" max="50" value="5"
+               class="w-32 border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+      </div>
+
+      <div id="map" class="w-full h-64 rounded border" role="region" aria-label="Map showing group area"></div>
+
+      <!-- Hidden inputs for lat/lon -->
+      <input type="hidden" id="location-lat" name="location_lat" aria-hidden="true">
+      <input type="hidden" id="location-lng" name="location_lng" aria-hidden="true">
+    </div>
+
+    <!-- Overlapping Group Warnings -->
+    <div id="overlapping-groups" class="text-sm mt-4"></div>
+
+    <!-- Form Actions -->
+    <div class="flex justify-between items-center pt-4 border-t">
+      <a href="{{ url_for('discover', tab='groups') }}"
+         class="inline-block px-5 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 shadow-sm transition">
+        Back
+      </a>
+      <button type="submit"
+              class="inline-flex items-center px-5 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 shadow-sm transition">
+        Create Group
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Leaflet Map Script -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const defaultLat = {{ current_user.latitude | default(49.2827) }};
+  const defaultLng = {{ current_user.longitude | default(-123.1207) }};
+  const defaultRadius = 5;
+
+  const map = L.map('map').setView([defaultLat, defaultLng], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  let center = L.latLng(defaultLat, defaultLng);
+  let circle = L.circle(center, {
+    color: 'green',
+    fillColor: '#38a169',
+    fillOpacity: 0.2,
+    radius: defaultRadius * 1000
+  }).addTo(map);
+
+  // Initial hidden input values
+  updateLocationInputs(center);
+  checkOverlappingGroups(center.lat, center.lng);
+
+
+  map.on('click', (e) => {
+    center = e.latlng;
+    circle.setLatLng(center);
+    updateLocationInputs(center);
+    checkOverlappingGroups(center.lat, center.lng);
+  });
+
+  document.getElementById('group_radius').addEventListener('input', (e) => {
+    const radius = parseFloat(e.target.value);
+    if (!isNaN(radius)) {
+      circle.setRadius(radius * 1000);
+      checkOverlappingGroups(center.lat, center.lng);
+    }
+  });
+
+  function updateLocationInputs(latlng) {
+    document.getElementById('location-lat').value = latlng.lat;
+    document.getElementById('location-lng').value = latlng.lng;
+  }
+
+  async function checkOverlappingGroups(lat, lon) {
+    const url = `/api/overlapping_groups?product_id={{ product.upc }}&lat=${lat}&lon=${lon}`;
+    const res = await fetch(url);
+    const groups = await res.json();
+    const container = document.getElementById('overlapping-groups');
+
+    if (!groups.length) {
+      container.innerHTML = `✅ No overlapping groups for <strong>{{ product.name }}</strong>.`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+        <h2 class="font-semibold text-yellow-700 mb-2">Nearby Groups Found 🎯</h2>
+        <ul class="text-yellow-800 space-y-1">
+          ${groups.map(g => `
+            <li>
+              👉 <a href="/group/${g.id}" class="underline text-blue-700 hover:text-blue-900">${g.name}</a><br>
+              📍 ${g.center_lat}°N, ${g.center_lon}°W — ${g.radius_km} km radius
+            </li>
+          `).join('')}
+        </ul>
+        <div class="mt-3 text-yellow-800">
+          If you're forming a niche group, choose a clear name like 
+          <em>Eco-conscious Tuna Eaters</em> or <em>Halal Lamb Meat Buyers</em>.
+        </div>
+      </div>`;
+  }
+});
+</script>
+
+{% endblock %}

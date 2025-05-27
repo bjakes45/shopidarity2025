@@ -2,6 +2,7 @@ import csv
 import random
 import requests
 import math
+import json
 from collections import defaultdict
 from functools import wraps
 from datetime import datetime, timedelta
@@ -10,8 +11,9 @@ from flask_login import current_user
 from werkzeug.security import generate_password_hash,check_password_hash
 from faker import Faker
 from math import ceil
+from geopy.distance import geodesic
 
-from models import db, Product, Favorite, Rating, Deal, User, APIUsage  # adjust paths if needed
+from models import db, Product, Favorite, Rating, Deal, User, APIUsage, Badge, UserBadge  # adjust paths if needed
 
 faker = Faker()
 
@@ -22,7 +24,8 @@ def get_usage(ip):
     usage = APIUsage.query.get(ip)
     return usage
 
-def enforce_rate_limit(usage):
+def enforce_rate_limit(usage, ip):
+    ip=ip
     usage = usage
     now = datetime.utcnow()
 
@@ -35,7 +38,7 @@ def enforce_rate_limit(usage):
         else:
             usage.count += 1
             usage.remaining -= 1
-            flash("IP:" + str(usage.ip) + "-" + str(usage.remaining) + "Lookups Remaining")
+            flash("IP: " + str(usage.ip) + " - " + str(usage.remaining) + " Lookups Remaining")
     else:
         usage = APIUsage(
             ip=ip,
@@ -44,7 +47,7 @@ def enforce_rate_limit(usage):
             reset_time=now + timedelta(days=1)
         )
         db.session.add(usage)
-        flash("First use by IP:" + str(usage.ip))
+        flash("First use by IP: " + str(usage.ip))
 
     db.session.commit()
     return None  # No error
@@ -143,38 +146,45 @@ def recommend_products(self, other_users):
     return ordered_products
 
 def get_potential_groups(user):
-    # Step 1: Get the products this user has interacted with
-    product_upcs = {f.product_upc for f in user.favorites} | {r.product_upc for r in user.ratings if r.score >= 3}
+    if not (user.latitude and user.longitude):
+        return []
+
+    user_location = (user.latitude, user.longitude)
+
+    product_upcs = {f.product_upc for f in user.favorites} | {
+        r.product_upc for r in user.ratings if r.score >= 3
+    }
 
     group_candidates = defaultdict(lambda: {'product': None, 'interested_users': set()})
 
-    # Step 2: For each product, find other users who liked or rated it
     for product_upc in product_upcs:
         product = Product.query.get(product_upc)
         if not product:
             continue
-        # Users who also favorited this product
-        favorited_users = User.query\
-            .join(Favorite).filter(Favorite.product_upc == product_upc)\
-            .filter(User.id != user.id).all()
 
-        # Users who also rated this product
-        rated_users = User.query\
-            .join(Rating).filter(
-            Rating.product_upc == product_upc,
-            Rating.score >= 3,
-            User.id != user.id
-        ).all()
+        # Favorited users
+        favorited_users = User.query.join(Favorite)\
+            .filter(Favorite.product_upc == product_upc, User.id != user.id).all()
 
+        # Rated users
+        rated_users = User.query.join(Rating)\
+            .filter(Rating.product_upc == product_upc, Rating.score >= 3, User.id != user.id).all()
 
-        # Combine interested users
-        all_users = set(favorited_users) | set(rated_users)
+        all_users = set(favorited_users + rated_users)
 
-        if all_users:
+        nearby_users = set()
+        for other_user in all_users:
+            if other_user.latitude and other_user.longitude:
+                other_loc = (other_user.latitude, other_user.longitude)
+                distance_km = geodesic(user_location, other_loc).km
+                if distance_km <= 30:
+                    other_user.distance_km = distance_km  # optional: display in UI
+                    nearby_users.add(other_user)
+
+        if nearby_users:
             group_candidates[product_upc]['product'] = product
-            group_candidates[product_upc]['interested_users'].update(all_users)
+            group_candidates[product_upc]['interested_users'].update(nearby_users)
 
-    # Step 3: Return as a sorted list (e.g., by group size descending)
     potential_groups = sorted(
         group_candidates.values(),
         key=lambda g: len(g['interested_users']),
@@ -182,6 +192,39 @@ def get_potential_groups(user):
     )
 
     return potential_groups
+
+def evaluate_badge_progress(user, badge_name, increment=1):
+    badge = Badge.query.filter_by(name=badge_name).first()
+    if not badge:
+        return
+
+    user_badge = UserBadge.query.filter_by(user_id=user.id, badge_id=badge.id).first()
+
+    if not user_badge:
+        user_badge = UserBadge(user_id=user.id, badge_id=badge.id, progress=0)
+        db.session.add(user_badge)
+
+    user_badge.progress += increment
+
+    # Determine the highest progression level the user qualifies for
+    best_level = None
+    best_color = None
+
+    for level in sorted(badge.progression, key=lambda x: x['threshold']):
+        if user_badge.progress >= level['threshold']:
+            best_level = level['level']
+            best_color = level['color']
+        else:
+            break
+
+    # Update if new level/color earned
+    if best_level != user_badge.level or best_color != user_badge.color:
+        user_badge.level = best_level
+        user_badge.color = best_color
+        # Optionally: send notification or track achievement here
+
+    db.session.commit()
+
 
 def random_point_near_vancouver(radius_km=40):
     # Vancouver's coordinates
@@ -204,6 +247,60 @@ def random_point_near_vancouver(radius_km=40):
     new_lng = center_lng + x / math.cos(math.radians(center_lat))
 
     return new_lat, new_lng
+
+def evaluate_badge_progress(user, badge_name, increment=1, explicit_progress=None):
+    badge = Badge.query.filter_by(name=badge_name).first()
+    if not badge:
+        return None
+
+    user_badge = UserBadge.query.filter_by(user_id=user.id, badge_id=badge.id).first()
+    if not user_badge:
+        user_badge = UserBadge(user_id=user.id, badge_id=badge.id, progress=0)
+        db.session.add(user_badge)
+
+    # Handle progression types
+    if badge.progression_type == 'cumulative':
+        user_badge.progress += increment
+
+    elif badge.progression_type == 'max_active':
+        # e.g., Number of favorite products or groups joined
+        if explicit_progress is not None:
+            user_badge.progress = max(user_badge.progress, explicit_progress)
+
+    elif badge.progression_type == 'streak':
+        if explicit_progress is not None:
+            if explicit_progress > user_badge.progress:
+                user_badge.progress = explicit_progress
+
+    # Calculate badge level
+    best_level = None
+    best_color = None
+    for level in sorted(badge.progression, key=lambda x: x['threshold']):
+        if user_badge.progress >= level['threshold']:
+            best_level = level['level']
+            best_color = level['color']
+        else:
+            break
+
+    level_up = False
+    if best_level != user_badge.level or best_color != user_badge.color:
+        user_badge.level = best_level
+        user_badge.color = best_color
+        level_up = True
+
+    db.session.commit()
+
+    if level_up:
+        return {
+            "badge_name": badge.name,
+            "title": badge.title,
+            "icon": badge.fa_icon,
+            "level": best_level,
+            "color": best_color
+        }
+
+    return None
+
 
 #create Items in Database from upc_corpus.csv on server init
 def seed_products(i=500):
@@ -253,7 +350,7 @@ def seed_plus(i=2000):
         print(f"{count} products seeded.")
 
 # Create 100 test users and assign 100 favorites and ratings each
-def seed_users_with_interactions(user_count=100, interactions_per_user=100):
+def seed_users_with_interactions(user_count=100, interactions_per_user=50):
     products = Product.query.all()
     product_ids = [p.upc for p in products]
       
@@ -316,4 +413,34 @@ def seed_deals(deal_count=100):
     db.session.commit()
     print(f"{count} deals seeded.")
 
+def seed_badges(filepath='static/badges.csv'):
+    try:
+        with open(filepath, newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            db.session.query(Badge).delete()  # Optional: clear existing badges
+
+            for row in reader:
+                raw_json = row['progression_json'].strip().replace('""', '"')
+                try:
+                    json.loads(raw_json)  # Validate it's correct JSON
+                except json.JSONDecodeError as e:
+                    print(f"Invalid JSON in row '{row['name']}': {e}")
+                    continue
+
+                badge = Badge(
+                    name=row['name'].strip(),
+                    title=row['title'].strip(),
+                    description=row['description'].strip(),
+                    progression_type=row['progression_type'].strip(),
+                    fa_icon=row['fa_icon'].strip(),
+                    fa_color=row['fa_color'].strip(),
+                    progression_json=raw_json
+                )
+                db.session.add(badge)
+
+            db.session.commit()
+            print("Badges imported successfully.")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error importing badges: {e}")
 

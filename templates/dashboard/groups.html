@@ -1,0 +1,65 @@
+{% extends "dashboard/base.html" %}
+{% block dashboard %}
+<section class="max-w-4xl mx-auto p-6 space-y-8">
+
+  <!-- My Groups -->
+  <div class="bg-white p-4 rounded-lg shadow">
+    <h2 class="text-xl font-bold mb-4">My Groups</h2>
+    {% if groups %}
+      <ul class="space-y-3">
+        {% for group in groups %}
+          <li class="border p-3 rounded-lg hover:bg-gray-50">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="font-semibold text-lg">{{ group.name }}</h3>
+                <p class="text-sm text-gray-500">
+                📍 Zone: {{ "%.2f"|format(group.center_lat) }}°N, 
+                          {{ "%.2f"|format(group.center_lon) }}°W —
+                          {{ group.radius_km }}km radius
+              </p>
+              </div>
+              <a href="{{ url_for('group_detail', group_id=group.id) }}"
+                 class="text-blue-600 text-sm font-medium hover:underline">View Group →</a>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500 italic">You're not in any groups yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Pending Invitations -->
+  <div class="bg-white p-4 rounded-lg shadow">
+    <h2 class="text-xl font-bold mb-4">Pending Invitations</h2>
+    {% if group_invites %}
+      <ul class="space-y-3">
+        {% for invite in group_invites %}
+          <li class="border p-3 rounded-lg">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="font-semibold">{{ invite.group.name }}</h3>
+                <p class="text-sm text-gray-500">Invited by: {{ invite.user.username }}</p>
+              </div>
+              <!-- Optional: Accept/Decline buttons can go here -->
+              <div class="flex gap-2">
+                <form method="post" action="{{ url_for('accept_invite', invite_id=invite.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> 
+                  <button type="submit" class="text-green-600 hover:underline text-sm">Accept</button>
+                </form>
+                <form method="post" action="{{ url_for('decline_invite', invite_id=invite.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> 
+                  <button type="submit" class="text-red-600 hover:underline text-sm">Decline</button>
+                </form>
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-gray-500 italic">No pending invitations.</p>
+    {% endif %}
+  </div>
+
+</section>
+{% endblock %}

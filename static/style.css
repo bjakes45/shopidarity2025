@@ -401,16 +401,3 @@ body {
 #search-links ul li {
   margin-bottom: 10px;
 }
-
-button {
-  margin-top: 20px;
-}
-
-a {
-  color: #007bff;
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}

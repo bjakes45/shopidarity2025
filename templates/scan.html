@@ -35,9 +35,9 @@
           <div id="product-detail-link" class="mb-4 hidden"></div>
           <p id="add-product-prompt" class="text-sm text-gray-600 mb-2 hidden"></p>
           <p id="add-product-verify" class="text-sm text-gray-500 mb-4 hidden">
-            Before adding this product to Shopidarity, check external sources to verify the product details.<br>
-            You will be able to use our UPC lookup tool on the next page.<br>
-            All users will be limited too 5 product lookups per day to reduce external service charges.
+            Before adding this product to the Shopidarity library, check external sources to verify the product details.<br>
+            You will be able to use our UPC lookup tool on the next page, to search for this product across other trusted data sources.<br>
+            All users will be limited too 5 product lookups per day to reduce external service charges (this may be increased in the future).
           </p>
           <h2 class="text-md font-semibold">Search:</h2>
           <div class="flex flex-wrap text-center gap-2 mt-2">
@@ -79,51 +79,52 @@
     // Validate UPC/PLU codes (same as your regex)
     const validateUPC = code => /^(?:\d{4}|9\d{4}|\d{12,13})$/.test(code);
 
-    function handleUPCSearch(code) {
-      if (!validateUPC(code)) {
-        resultEl.innerHTML = `<span class="text-red-600">Invalid code detected. Please scan a valid barcode or enter a UPC/PLU.</span>`;
-        searchLinksEl.classList.add('hidden');
-        productDetailEl.classList.add('hidden');
+function handleUPCSearch(code) {
+  if (!validateUPC(code)) {
+    resultEl.innerHTML = `<span class="text-red-600">Invalid code detected. Please scan a valid barcode or enter a UPC/PLU.</span>`;
+    searchLinksEl.classList.add('hidden');
+    productDetailEl.classList.add('hidden');
+    addProductPrompt.classList.add('hidden');
+    addProductVerify.classList.add('hidden');
+    return;
+  }
+
+  fetch(`/api/check_upc/${code}`)
+    .then(res => res.json())
+    .then(data => {
+      const type = code.length <= 5 ? 'PLU' : 'UPC';
+      resultEl.textContent = `Detected ${type}: ${code}`;
+
+      // Update search links every time
+      googleLink.href = `https://www.google.com/search?q=${type}:${code}`;
+      amazonLink.href = `https://www.amazon.com/s?k=${type}:${code}`;
+      openfoodfactsLink.href = type === 'UPC' ? `https://world.openfoodfacts.org/product/${code}` : "#";
+      openfoodfactsLink.style.display = type === 'UPC' ? "inline-block" : "none";
+
+      searchLinksEl.classList.remove('hidden');
+      productDetailEl.classList.remove('hidden');
+
+      if (data.exists) {
+        const product = data.product;
+        productDetailEl.classList.remove('hidden');
+        productDetailEl.innerHTML = `
+          <div class="p-4 border rounded shadow-sm bg-white">
+            <h3 class="text-lg font-semibold text-blue-600 mb-1">
+              <a href="/products/${code}" class="hover:underline">${product.name}</a>
+            </h3>
+            <p class="text-sm text-gray-600">${type} ${product.upc}</p>
+            <p class="text-sm text-gray-600">Brand: ${product.brand}</p>
+          </div>`;
         addProductPrompt.classList.add('hidden');
         addProductVerify.classList.add('hidden');
-        return;
+      } else {
+        addProductPrompt.classList.remove('hidden');
+        addProductPrompt.innerHTML = `<em>Product with ${type} ${code} is not yet in the Shopidarity library.</em><br>
+          <a href="/products/new?upc=${code}" class="bg-blue-500 text-white py-2 px-4 rounded inline-block mt-2 hover:bg-blue-700">Add this product</a>`;
+        addProductVerify.classList.remove('hidden');
       }
-
-      fetch(`/api/check_upc/${code}`)
-        .then(res => res.json())
-        .then(data => {
-          const type = code.length <= 5 ? 'PLU' : 'UPC';
-          resultEl.textContent = `Detected ${type}: ${code}`;
-
-          searchLinksEl.classList.remove('hidden');
-          productDetailEl.classList.remove('hidden');
-
-          if (data.exists) {
-            const product = data.product;
-            productDetailEl.classList.remove('hidden');
-            productDetailEl.innerHTML = `
-              <div class="p-4 border rounded shadow-sm bg-white">
-                <h3 class="text-lg font-semibold text-blue-600 mb-1">
-                  <a href="/products/${code}" class="hover:underline">${product.name}</a>
-                </h3>
-                <p class="text-sm text-gray-600">${type} ${product.upc}</p>
-                <p class="text-sm text-gray-600">Brand: ${product.brand}</p>
-              </div>`;
-            addProductPrompt.classList.add('hidden');
-            addProductVerify.classList.add('hidden');
-          } else {
-            googleLink.href = `https://www.google.com/search?q=${type}:${code}`;
-            amazonLink.href = `https://www.amazon.com/s?k=${type}:${code}`;
-            openfoodfactsLink.href = type === 'UPC' ? `https://world.openfoodfacts.org/product/${code}` : "#";
-            openfoodfactsLink.style.display = type === 'UPC' ? "inline-block" : "none";
-
-            addProductPrompt.classList.remove('hidden');
-            addProductPrompt.innerHTML = `<em>Product with ${type} ${code} is not yet in the Shopidarity library.</em><br>
-              <a href="/products/new?upc=${code}" class="bg-blue-500 text-white py-2 px-4 rounded inline-block mt-2 hover:bg-blue-700">Add this product</a>`;
-            addProductVerify.classList.remove('hidden');
-          }
-        });
-    }
+    });
+}
 
     // Quagga scanner for desktop
     function startQuaggaScanner() {

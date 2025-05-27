@@ -1,0 +1,43 @@
+{% extends "dashboard/base.html" %}
+{% block dashboard %}
+<section id="added_products" class="mb-10">
+  <h3 class="text-3xl font-bold text-gray-800 mb-6">My Added Deals</h3>
+
+  {% if deals %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+{% for fav in deals %}
+  <div class="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-shadow border border-gray-100">
+    <a href="{{ url_for('deal_detail', deal_id=fav.id) }}"
+       class="block text-xl font-semibold text-blue-700 hover:underline mb-2">
+      {{ fav.product.name }}
+    </a>
+    <div class="text-sm text-gray-600 space-y-1">
+      <p>
+        <span class="font-medium">{{ 'Store' if fav.store else 'URL' }}:</span>
+        {% if fav.store %}
+          {{ fav.store }}
+        {% else %}
+          <a href="{{ fav.url }}" class="text-blue-600 hover:underline break-all" target="_blank" rel="noopener">
+            {{ fav.url }}
+          </a>
+        {% endif %}
+      </p>
+      <p>
+        <span class="font-medium">Price:</span>
+        ${{ "%.2f"|format(fav.price) }}
+      </p>
+    </div>
+  </div>
+{% endfor %}
+
+    </div>
+  {% else %}
+    <div class="text-gray-600 bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+      <p class="text-lg">You haven't added any deals yet.</p>
+      <a href="{{ url_for('add_deal') }}" class="mt-3 inline-block text-blue-600 hover:underline font-medium">
+        Add your first deal →
+      </a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

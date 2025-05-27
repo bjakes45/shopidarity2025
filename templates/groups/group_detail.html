@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow space-y-6">
+
+  <!-- Group Header -->
+  <div class="bg-gray-100 p-4 rounded-lg text-center border">
+    <h1 class="text-2xl font-bold">{{ group.name }}</h1>
+  </div>
+
+  <!-- Favorite & Zone Info -->
+  <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg text-sm text-gray-700">
+    <div>🏷 <strong>Favorite:</strong> <a href="{{ url_for('product_detail', upc=product.upc)}}">{{ product.name }}</a></div>
+    <div>📍 <strong>Zone:</strong> 
+    	{{ "%.2f"|format(group.center_lat) }}°N, 
+           {{ "%.2f"|format(group.center_lon) }}°W —
+           {{ group.radius_km }}km radius
+    </div>
+  </div>
+
+  <div class="border-b">
+    <nav class="flex space-x-4 text-center">
+      <a href="{{ url_for('group_detail', group_id=group.id, tab='bulletin') }}" 
+         class="py-2 px-4 font-semibold border-b-2 {% if tab == 'bulletin' %}border-blue-500 text-blue-600{% else %}text-gray-500 hover:text-blue-600{% endif %}">
+         Bulletin
+      </a>
+      <a href="{{ url_for('group_detail', group_id=group.id, tab='deals') }}" 
+         class="py-2 px-4 {% if tab == 'deals' %}font-semibold border-b-2 border-blue-500 text-blue-600{% else %}text-gray-500 hover:text-blue-600{% endif %}">
+         Deals
+      </a>
+      <a href="{{ url_for('group_detail', group_id=group.id, tab='members') }}" 
+         class="py-2 px-4 {% if tab == 'members' %}font-semibold border-b-2 border-blue-500 text-blue-600{% else %}text-gray-500 hover:text-blue-600{% endif %}">
+         Members
+      </a>
+    </nav>
+  </div>
+
+  <!-- Bulletin Posts -->
+{% if tab == 'bulletin' %}
+  <div class="space-y-4">
+    {% for post in bulletin_posts %}
+      <div class="p-4 bg-white border rounded-lg shadow-sm">
+        <p class="text-gray-800 text-sm">
+          {% if post.type == 'deal' %}🛍️{% elif post.type == 'chat' %}💬{% elif post.type == 'event' %}🧵{% elif post.type == 'photo' %}📸{% endif %}
+          {{ post.content }}
+        </p>
+        {% if post.reply_count %}
+          <p class="text-xs text-gray-500 mt-1">{{ post.reply_count }} replies</p>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="text-gray-500 italic">No posts yet. Start the conversation!</p>
+    {% endfor %}
+  </div>
+{% elif tab == 'deals' %}
+<section id="deals" class="mb-6">
+  <p class="text-sm text-gray-500 mb-4">
+    {% if current_user.is_authenticated %}
+      Your location: {{ current_user.latitude }}, {{ current_user.longitude }}
+     {% else %}
+       This is a demonstration. Some data may be simulated.
+     {% endif %}
+  </p>
+
+  <!-- Map container -->
+  <div id="map" class="w-full mb-6 rounded border" style="height: 500px;"></div>
+
+  <!-- Deal + Cart Cards -->
+  <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
+    {% for deal in deals %}
+      <li class="bg-white border rounded-2xl shadow hover:shadow-md transition m-3 p-4 flex flex-col justify-between">
+        <a href="{{ url_for('deal_detail', deal_id=deal.id) }}" class="block">
+          <h3 class="font-semibold text-lg truncate">{{ deal.product.name }}</h3>
+          <p class="text-sm text-gray-600 mt-1">{{ deal.store }}</p>
+          <p class="text-sm text-gray-600 mt-1">
+            <span class="font-bold">${{ "%.2f"|format(deal.price) }}</span>
+          </p>
+        </a>
+
+        {% if deal.collective_carts %}
+          <div class="mt-4">
+            <p class="text-sm text-gray-500 font-medium mb-1">Carts:</p>
+            <ul class="text-sm text-green-600 space-y-1">
+              {% for cart in deal.collective_carts %}
+                <li>Share: ${{ "%.2f"|format(cart.share_cost()) }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  <!-- Leaflet Map Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const map = L.map('map').setView([{{ current_user.latitude }}, {{ current_user.longitude }}], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      // Marker: Deals
+      {% for deal in deals %}
+        L.marker([{{ deal.latitude }}, {{ deal.longitude }}])
+          .addTo(map)
+          .bindPopup(`<a href='{{ url_for('deal_detail', deal_id=deal.id) }}'>🛍️ {{ deal.product.name }}</a><br>$${{ "%.2f"|format(deal.price) }}`);
+      {% endfor %}
+
+      // Marker: Carts (different icon)
+      {% for cart in carts %}
+        L.marker([{{ cart.latitude }}, {{ cart.longitude }}])
+          .addTo(map)
+          .bindPopup(`<a href='{{ url_for('deal_detail', deal_id=cart.deal.id) }}'>🛒 Cart for {{ cart.deal.product.name }}</a>`);
+      {% endfor %}
+
+      // Current user marker
+      {% if current_user.is_authenticated %}
+        const userIcon = L.AwesomeMarkers.icon({
+          icon: 'user',
+          markerColor: 'red',
+          prefix: 'fa'
+        });
+        L.marker([{{ current_user.latitude }}, {{ current_user.longitude }}], { icon: userIcon })
+          .addTo(map)
+          .bindPopup("You are here");
+      {% endif %}
+    });
+  </script>
+</section>
+
+{% elif tab == 'members' %}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Active Members -->
+    <section class="bg-white p-4 rounded-lg shadow border border-gray-200">
+      <h3 class="text-lg font-semibold mb-3 text-blue-600">Active Members</h3>
+      {% if accepted_users %}
+        <ul class="space-y-2 max-h-96 overflow-auto">
+          {% for member in accepted_users %}
+            <li class="p-2 border border-gray-100 rounded hover:bg-blue-50 cursor-default">
+              {{ member.username }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-gray-500 italic">No active members found.</p>
+      {% endif %}
+    </section>
+
+    <!-- Pending Members -->
+    <section class="bg-white p-4 rounded-lg shadow border border-gray-200">
+      <h3 class="text-lg font-semibold mb-3 text-yellow-600">Pending Members</h3>
+      {% if pending_users %}
+        <ul class="space-y-2 max-h-96 overflow-auto">
+          {% for member in pending_users %}
+            <li class="p-2 border border-gray-100 rounded hover:bg-yellow-50 cursor-default">
+              {{ member.username }}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-gray-500 italic">No pending members found.</p>
+      {% endif %}
+    </section>
+
+  </div>
+{% endif %}
+
+
+
+</section>
+{% endblock %}

@@ -2,6 +2,10 @@
 {% block title %}Product {{ product.upc }}{% endblock %}
 
 {% block detail %}
+<p class="text-sm text-gray-500 mb-4">
+  {{ product.favorited_by_to_alert(current_user) | length }} Users will recieve Alerts!
+</p>
+
 <!-- Deal Submission Form -->
 <form id="new-deal-form" action="{{ url_for('product_new_deal', upc=product.upc) }}" method="post" novalidate class="space-y-4">
 	<input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">

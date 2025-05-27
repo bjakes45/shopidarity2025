@@ -1,0 +1,39 @@
+{% extends "dashboard/base.html" %}
+{% block dashboard %}
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-semibold">Inbox</h2>
+    <a href="{{ url_for('message_create') }}"
+       class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+      Send New Message
+    </a>
+  </div>
+
+  {% if messages %}
+    <ul class="space-y-2">
+      {% for msg in messages %}
+        <li>
+          <a href="{{ url_for('message_detail', message_id=msg.id) }}"
+             class="block p-4 rounded shadow border {{ 'bg-white' if msg.read else 'bg-blue-50 border-blue-300' }} hover:bg-blue-100 transition">
+            <div class="flex justify-between">
+              <div>
+                <p class="font-medium text-gray-800">
+                  From: {{ msg.sender.username if msg.sender else "System" }}
+                </p>
+                <p class="text-sm text-gray-600">
+                  {{ msg.sent_at.strftime('%Y-%m-%d %H:%M') }}
+                </p>
+              </div>
+              {% if not msg.read %}
+                <span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full self-start">
+                  Unread
+                </span>
+              {% endif %}
+            </div>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-gray-500">No messages.</p>
+  {% endif %}
+{% endblock %}

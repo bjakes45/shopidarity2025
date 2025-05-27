@@ -30,7 +30,7 @@
           {% if deal.collective_carts and deal.collective_carts|length > 0 %}
             <a href="{{ url_for('cart_detail', cart_id=deal.collective_carts[0].id) }}" class="text-sm text-green-700 underline">
               Collective Cart: 
-              <span class="font-semibold">${{ "%.2f"|format(deal.collective_carts[0].share_cost) }}</span> per share
+              <span class="font-semibold">${{ "%.2f"|format(deal.collective_carts[0].share_cost()) }}</span> per share
             </a>
           {% else %}
             <a href="{{ url_for('create_cart', deal_id=deal.id) }}"

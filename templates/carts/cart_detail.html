@@ -1,1 +1,109 @@
-cart_detail.html
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow space-y-8">
+
+	<!-- 🚚 Pickup Details Callout -->
+	<div class="bg-blue-50 border border-blue-200 p-5 rounded-lg shadow-sm">
+		<h2 class="text-2xl font-bold text-blue-700 mb-2">📦 Pickup Information</h2>
+		<p class="text-lg text-gray-800"><strong>Location:</strong> {{ cart.pickup_location() or "To be announced" }}</p>
+		<p class="text-lg text-gray-800"><strong>Pickup Time:</strong> {{ cart.pickup_time.strftime('%Y-%m-%d %H:%M') if cart.pickup_time else "To be confirmed" }}</p>
+	</div>
+
+	<!-- 🛒 Product & Summary -->
+	<div>
+		<h1 class="text-3xl font-bold text-gray-800">{{ cart.product.name if cart.product else "Unnamed Product" }}</h1>
+		<p class="text-gray-600 mt-2">{{ cart.description }}</p>
+	</div>
+
+	<!-- 🔢 Cost & Logistics -->
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+		<div class="bg-gray-50 p-5 rounded-lg shadow-inner space-y-2">
+			<a href="{{ url_for('deal_detail', deal_id=cart.deal.id)}}">
+				<h3 class="text-lg font-semibold text-gray-700">Cost & Deal Info</h3>
+			</a>
+			<p><strong>Total Cost:</strong> ${{ "%.2f"|format(cart.total_cost) }}</p>
+			<p><strong>Shares:</strong> {{ cart.share_count }}</p>
+			<p><strong>Share Cost:</strong> ${{ "%.2f"|format(cart.share_cost()) }}</p>
+			<p><strong>Host:</strong> {{ cart.host.username }}</p>
+			<p><strong>Store:</strong> {{ cart.store_name or cart.deal.store }}</p>
+			{% if cart.expiry %}
+				<p><strong>Expires:</strong> {{ cart.expiry.strftime('%Y-%m-%d %H:%M') }}</p>
+			{% endif %}
+		</div>
+		<div class="bg-gray-50 p-5 rounded-lg shadow-inner space-y-2">
+			<h3 class="text-lg font-semibold text-gray-700">Cart Settings</h3>
+			<p><strong>Tax Applied:</strong> {{ "Yes" if cart.tax_applied else "No" }}</p>
+			{% if cart.tax_applied %}
+				<p><strong>Tax Rate:</strong> {{ cart.tax_rate }}%</p>
+			{% endif %}
+			<p><strong>Privacy:</strong> {{ cart.privacy|title }}</p>
+			<p><strong>Payment Method:</strong> {{ cart.payment_method }}</p>
+			<p><strong>Payment Timing:</strong> {{ cart.payment_timing }}</p>
+			<p><strong>Fulfilled:</strong> {{ "Yes" if cart.is_fulfilled else "No" }}</p>
+		</div>
+	</div>
+
+	<!-- 👥 Participant List -->
+	<div>
+		<h2 class="text-2xl font-semibold text-gray-800">Participants</h2>
+		<ul class="divide-y divide-gray-200 mt-2">
+			{% for share in cart.shares if not share.deleted %}
+			<li class="py-3 flex justify-between items-center">
+				<div>
+					{% if share.user %}
+						<span class="font-medium text-gray-800">{{ share.user.username }}</span>
+						{% if not share.approved %}
+							— <span class="text-yellow-600">Awaiting Approval</span>
+						{% elif share.fulfilled %}
+							— <span class="text-green-600">Fulfilled</span>
+						{% else %}
+							— <span class="text-blue-600">Approved</span>
+						{% endif %}
+					{% else %}
+						<span class="italic text-gray-400">Unclaimed slot</span>
+					{% endif %}
+				</div>
+
+				{% if user.id == cart.host_id and share.user and not share.approved %}
+				<div class="space-x-2">
+					<form method="POST" action="{{ url_for('approve_share', share_id=share.id) }}" class="inline">
+						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+						<button type="submit" class="text-green-700 hover:underline">Approve</button>
+					</form>
+					<form method="POST" action="{{ url_for('reject_share', share_id=share.id) }}" class="inline">
+						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+						<button type="submit" class="text-red-600 hover:underline">Reject</button>
+					</form>
+				</div>
+				{% endif %}
+			</li>
+			{% endfor %}
+		</ul>
+	</div>
+
+	<!-- 🙋 Share Request -->
+	{% set user_has_share = cart.shares | selectattr('user_id', 'equalto', user.id) | list | length > 0 %}
+	{% set unclaimed_shares = cart.shares | selectattr('user_id', 'equalto', none) | rejectattr('deleted') | list | length %}
+
+	{% if user.is_authenticated %}
+		{% if not user_has_share and unclaimed_shares > 0 %}
+		<div class="mt-6">
+			<h2 class="text-xl font-semibold text-gray-800">Request a Share</h2>
+			<form method="POST" action="{{ url_for('cart_detail', cart_id=cart.id) }}" class="mt-2">
+				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+				<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+					Request Share for ${{ "%.2f"|format(cart.share_cost()) }}
+				</button>
+			</form>
+		</div>
+		{% elif user_has_share %}
+		<p class="mt-4 text-green-700 font-semibold">You’ve already requested a share.</p>
+		{% else %}
+		<p class="mt-4 text-red-600 font-semibold">No shares left — this cart is full.</p>
+		{% endif %}
+	{% else %}
+	<p class="mt-4 text-blue-700">Please <a href="{{ url_for('auth.login') }}" class="underline">log in</a> to request a share.</p>
+	{% endif %}
+</div>
+{% endblock %}

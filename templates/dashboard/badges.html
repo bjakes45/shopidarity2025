@@ -1,0 +1,107 @@
+{% extends "dashboard/base.html" %}
+{% block dashboard %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+<section id="badge_display" class="mb-12 px-4 sm:px-6 lg:px-12 max-w-7xl mx-auto">
+	<h3 class="text-3xl font-bold mb-6 text-gray-900 tracking-tight text-center">
+		Your Badges
+	</h3>
+
+	<div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 justify-items-center">
+  {% for badge in badges %}
+    {% set user_badge = user_badges_dict.get(badge.id) %}
+    <div class="flex flex-col items-center justify-start text-center w-full max-w-[120px] transform hover:scale-105 transition-transform duration-200">
+      
+      <!-- Badge Icon -->
+
+      <div class="w-16 h-16 flex items-center justify-center rounded-full 
+        {{ color_map.get(user_badge.color, 'bg-black-200') if user_badge else 'bg-gray-200' }}">
+        <i class="fa {{ badge.fa_icon }} text-white text-lg"></i>
+      </div>
+      
+      <!-- Badge Title (Fixed height to normalize spacing) -->
+      <div class="mt-2 h-10 flex items-center justify-center text-sm font-semibold text-gray-800 text-center leading-tight">
+        <span>{{ badge.title }}</span>
+      </div>
+
+      <!-- Badge Level -->
+      <div class="text-xs text-gray-600">
+        {% if user_badge %}
+          Level: {{ user_badge.level }}
+        {% else %}
+          Not earned yet
+        {% endif %}
+      </div>
+
+      <!-- Progress Bar -->
+      {% if user_badge %}
+        {% set percent = (user_badge.progress / user_badge.next_level_threshold * 100) | round(0, 'floor') %}
+        <div class="w-full mt-1">
+          <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div class="h-full {{ color_map.get(user_badge.color, 'bg-black-200') if user_badge else 'bg-gray-200' }}" style="width: {{ percent }}%;"></div>
+          </div>
+          <div class="text-[10px] text-gray-500 mt-1">
+            {{ user_badge.progress }} / {{ user_badge.next_level_threshold }}
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  {% endfor %}
+</div>
+
+</section>
+
+<details class="bg-white p-4 rounded-xl shadow-sm group">
+	<summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
+		Badge Progression
+	</summary>
+	<div class="mt-2 text-gray-700">
+
+
+
+		<section id="badge_system" class="mb-12 px-4 sm:px-6 lg:px-12 max-w-7xl mx-auto">
+
+			<p class="mb-8 mx-auto max-w-3xl text-gray-700 text-base sm:text-lg leading-relaxed text-center">
+				Below is a list of the badges you will be able to earn and how to achieve them.<br/>
+				Collect and them level up. Badges reward meaningful contributions and participation.  
+			</p>
+
+			<div class="overflow-x-auto rounded-lg shadow-lg border border-gray-200">
+				<table class="min-w-full divide-y divide-gray-200 bg-white">
+					<thead class="bg-blue-600">
+						<tr>
+							<th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Badge Name</th>
+							<th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">What You’ll Be Rewarded For</th>
+							<th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Progression</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-gray-200">
+						{% for badge in badges %}
+						<tr class="{{ loop.cycle('bg-white hover:bg-gray-50', 'bg-gray-50 hover:bg-gray-100') }} transition-colors duration-150">
+							<td class="px-6 py-4 whitespace-normal text-sm font-medium text-gray-900">
+								<div class="flex items-center justify-center gap-3 h-full">
+									<span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-400">
+										<i class="fa {{ badge.fa_icon }} text-{{ badge.fa_color }}"></i>
+									</span>
+									{{ badge.title }}
+								</div>
+							</td>
+							<td class="px-6 py-4 whitespace-normal text-sm text-gray-700">{{ badge.description }}</td>
+							<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-center">
+								{% for level in badge.progression %}
+								<div class="mb-1">
+									<span class="font-semibold text-{{ level.color }}">{{ level.level }}</span> ({{ level.threshold }})
+								</div>
+								{% endfor %}
+							</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</section>
+	</div>
+</details>
+
+{% endblock %}

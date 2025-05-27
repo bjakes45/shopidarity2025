@@ -13,27 +13,85 @@
   </svg>
 </button>
 
-  <!-- Sidebar -->
-  <aside
-    id="sidebar"
-    class="fixed lg:static z-40 inset-y-0 left-0 w-64 bg-gray-100 transform transition-transform duration-200 ease-in-out -translate-x-full lg:translate-x-0 lg:inset-auto lg:transform-none overflow-y-auto p-4 sm:p-6 text-sm sm:text-base shrink-0"
+<!-- Sidebar -->
+<aside
+id="sidebar"
+class="fixed lg:static z-40 inset-y-0 left-0 w-64 bg-gray-100 transform transition-transform duration-200 ease-in-out -translate-x-full lg:translate-x-0 lg:inset-auto lg:transform-none overflow-y-auto p-4 sm:p-6 text-sm sm:text-base shrink-0"
+>
+<h2 class="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">
+  <a href="{{ url_for('dashboard') }}" class="text-blue-600 hover:underline">My Dashboard</a>
+</h2>
+<nav class="flex flex-col gap-1 text-sm">
+<div class="w-full">
+  <button 
+    type="button" 
+    class="flex items-center justify-between w-full px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition focus:outline-none"
+    onclick="document.getElementById('my-products-subnav').classList.toggle('hidden')"
   >
-    <h2 class="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">
-      <a href="{{ url_for('dashboard') }}" class="text-blue-600 hover:underline">My Dashboard</a>
-    </h2>
-    <nav class="flex flex-col gap-2">
-      <a href="{{ url_for('dashboard_added_products') }}" class="text-blue-600 hover:underline">My Added Products</a>
-      <a href="{{ url_for('dashboard_favorites') }}" class="text-blue-600 hover:underline">My Favorites</a>
-      <a href="{{ url_for('dashboard_ratings') }}" class="text-blue-600 hover:underline">My Ratings</a>
-      <a href="{{ url_for('dashboard_comments') }}" class="text-blue-600 hover:underline">My Comments</a>
+    <span>My Products</span>
+    <svg class="h-4 w-4 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+  <div id="my-products-subnav" class="ml-4 mt-1 flex flex-col gap-1 hidden">
+    <a href="{{ url_for('dashboard_favorites') }}"
+       class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-200 transition">
+      Favorites
+    </a>
+    <a href="{{ url_for('dashboard_added_products') }}"
+       class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-200 transition">
+      Added
+    </a>
+        <a href="{{ url_for('dashboard_deals') }}"
+       class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-200 transition">
+      Deals
+    </a>
+    <a href="{{ url_for('dashboard_ratings') }}"
+       class="block w-full px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition">
+      Ratings
+</a>
+  </div>
+</div>
+<a href="{{ url_for('dashboard_groups') }}"
+class="block w-full px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition">
+My Groups
+</a>
+<a href="{{ url_for('dashboard_carts') }}"
+class="block w-full px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition">
+My Collective Carts
+</a>
+<a href="{{ url_for('messages_inbox') }}"
+   class="relative block w-full px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition">
+  My Messages
+  {% if unread_message_count > 0 %}
+    <span class="absolute right-3 top-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+      {{ unread_message_count }}
+    </span>
+  {% endif %}
+</a>
+<a href="{{ url_for('dashboard_badges') }}"
+  class="block w-full px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition">
+  My Badges
+</a>
 
-      {% if current_user.is_authenticated and current_user.admin %}
-        <hr class="my-4 border-gray-300">
-        <h2 class="font-semibold text-gray-700">Admin</h2>
-        <a href="{{ url_for('dashboard_suggestions') }}" class="text-blue-600 hover:underline">Review Products</a>
-        <a href="{{ url_for('dashboard_new_user') }}" class="text-blue-600 hover:underline">Manage Users</a>
-      {% endif %}
-    </nav>
+{% if current_user.is_authenticated and current_user.admin %}
+<hr class="my-4 border-gray-300">
+<h2 class="font-semibold text-gray-500 px-4 text-xs uppercase tracking-wide">Admin</h2>
+<a href="{{ url_for('dashboard_suggestions') }}"
+class="block w-full px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition">
+Review Products
+</a>
+<a href="{{ url_for('dashboard_new_user') }}"
+class="block w-full px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition">
+Manage Users
+</a>
+<a href="{{ url_for('dashboard_reports') }}"
+class="block w-full px-4 py-2 rounded-md text-gray-700 hover:bg-gray-200 transition">
+Flag Reports
+</a>
+{% endif %}
+</nav>
+
   </aside>
 
 <!-- Overlay -->
@@ -74,16 +132,5 @@
 
   overlay.addEventListener('click', closeSidebar);
 </script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const toggleBtn = document.getElementById("menu-toggle");
-  const menu = document.getElementById("menu");
 
-  if (toggleBtn && menu) {
-    toggleBtn.addEventListener("click", () => {
-      menu.classList.toggle("hidden");
-    });
-  }
-});
-</script>
 {% endblock %}

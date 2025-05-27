@@ -1,0 +1,15 @@
+{% extends "dashboard/base.html" %}
+{% block dashboard %}
+  <h2>Send Message</h2>
+  <form method="post">
+    <label for="receiver_username">To (username):</label><br />
+    <input type="text" id="receiver_username" name="receiver_username" required><br />
+
+    <label for="content">Message:</label><br />
+    <textarea id="content" name="content" rows="5" required></textarea><br />
+
+    <button type="submit">Send</button>
+  </form>
+
+  <a href="{{ url_for('messages_inbox') }}">Back to Inbox</a>
+{% endblock %}

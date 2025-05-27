@@ -7,10 +7,17 @@
 
 <div>
 <div class="flex items-center border-b border-gray-300 mb-4 overflow-x-auto">
-  <h1 class="text-xl md:text-2xl font-extrabold mr-6 shrink-0">Discover</h1>
+  <h1 class="text-xl md:text-2xl font-extrabold mr-6 shrink-0 ml-4">Discover</h1>
   <div class="overflow-x-auto overflow-y-hidden no-scrollbar">
   <ul class="flex space-x-1 text-base whitespace-nowrap" id="tab-nav">
-      {% for name, label in [('users', 'Similar Users'), ('products', 'Recommended Products'), ('groups', 'Potential Groups'), ('deals', 'Nearby Deals')] %}
+  	{% if current_user.admin %}
+     	{% set tabs = [('users', 'Similar Users'), ('products', 'Recommended Products'), ('groups', 'Potential Groups'), ('deals', 'Nearby Deals')] %}
+  	{% else %}
+    	{% set tabs = [('products', 'Recommended Products'), ('groups', 'Potential Groups'), ('deals', 'Nearby Deals')] %}
+  	{% endif %}
+
+  	{% for name, label in tabs %}
+
         <li class="shrink-0">
           <a href="{{ url_for('discover', tab=name) }}"
              class="tab-link px-3 py-1.5 rounded-t-md transition-all duration-150
@@ -99,7 +106,7 @@
         {% for group in potential_groups %}
           <div class="rounded-xl border p-4 shadow bg-white hover:shadow-lg transition">
             <h3 class="text-lg font-semibold">
-              <a href="{{ url_for('product_detail', upc=group.product.upc) }}">{{ group.product.name }}</a>
+              <a href="{{ url_for('product_detail', upc=group.product.upc) }}">{{ group.product.name[:50] }}</a>
             </h3>
 
             <div class="text-sm text-gray-600 mb-2">
@@ -117,18 +124,23 @@
                       class="w-12 h-12 rounded-full border object-cover"
                     />
                     <span class="text-xs truncate max-w-[60px]">{{ user.username }}</span>
+                    <span class="text-xs truncate max-w-[60px]">{{ user.distance_km | round(1) }} km</span>
                   </div>
                 {% endif %}
               {% endfor %}
             </div>
   
-            <form action="#" method="post">
-              <input type="hidden" name="product_id" value="{{ group.product.id }}">
-              <button type="submit"
-                class="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 text-sm">
-                Start Group
-              </button>
-            </form>
+  <form action="{{ url_for('review_group') }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+   
+    <input type="hidden" name="product_upc" value="{{ group.product.upc }}">
+    <input type="hidden" name="user_ids" value='{{ group.interested_users | map(attribute="id") | list | tojson }}'>
+
+    <button type="submit"
+      class="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 text-sm">
+      Start Group
+    </button>
+  </form>
           </div>
         {% endfor %}
       </div>
@@ -152,26 +164,6 @@
   <!-- Map container -->
   <div id="map" class="w-full mb-6 rounded border" style="height: 500px;"></div>
 
-  <!-- User and deal cards -->
-<!-- When we switch this section to show Deals Geodata
-  <ul class="grid grid-cols-2 md:grid-cols-6 gap-4">
-    {% if nearby_users %}
-      {% for user in nearby_users %}
-        <div class="bg-white shadow-md rounded-lg p-4">
-          <h3 class="text-lg font-bold">{{ user.username }}</h3>
-          <p class="text-sm text-gray-600">Distance: {{ user.distance_km }} km</p>
-          {% if user.city %}
-            <p class="text-sm text-gray-500">City: {{ user.city }}</p>
-          {% endif %}
-        </div>
-      {% endfor %}
-    {% else %}
-      <p>No nearby users found.</p>
-    {% endif %}
-  </ul>
--->
-
-
   <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
     {% if nearby_deals %}
       {% for deal in nearby_deals %}
@@ -187,10 +179,14 @@
   
           {% if deal.collective_carts %}
             <div class="mt-4">
-              <p class="text-sm text-gray-500 font-medium mb-1">Collective Carts:</p>
+            	<a href="{{url_for('deal_carts', deal_id=deal.id)}}">
+            		<p class="text-sm text-gray-500 font-medium mb-1">Collective Carts:</p>
+            	</a>
               <ul class="text-sm text-green-600 space-y-1">
                 {% for cart in deal.collective_carts %}
-                  <li>Share: <span class="font-bold">${{ "%.2f"|format(cart.share_cost) }}</span></li>
+                 {% set share_cost = cart.share_cost() %}
+                  <a href="{{ url_for('cart_detail', cart_id=cart.id)}}"></a>
+                  <li>Share: <span class="font-bold">${{ "%.2f"|format(share_cost) }}</span></li>
                 {% endfor %}
               </ul>
             </div>
