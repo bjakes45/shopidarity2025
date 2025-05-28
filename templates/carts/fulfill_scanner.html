@@ -8,14 +8,7 @@
   </h2>
 
   <!-- Scanner container -->
-  <div class="relative w-full h-64 bg-black rounded-lg overflow-hidden">
-    <video id="preview" class="absolute inset-0 w-full h-full object-cover z-0" autoplay muted playsinline></video>
-
-    <!-- Frame overlay -->
-    <div class="absolute inset-0 z-10 pointer-events-none flex justify-center items-center">
-      <div class="w-48 h-48 border-4 border-indigo-500 rounded-lg animate-pulse"></div>
-    </div>
-  </div>
+  <div id="qr-reader" class="w-full h-64 rounded-lg overflow-hidden"></div>
 
   <!-- Scan result -->
   <div id="result" class="mt-6 text-center text-lg font-semibold"></div>
@@ -33,63 +26,58 @@
   </p>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<!-- html5-qrcode library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+
 <script>
   const expectedShareId = {{ expected_share_id }};
   const cartId = {{ share.cart_id }};
-  const video = document.getElementById('preview');
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  let hasScanned = false;
+  const resultEl = document.getElementById('result');
+  const returnLink = document.getElementById('return-link');
 
   function showMessage(msg, isSuccess) {
-    const resultEl = document.getElementById('result');
     resultEl.textContent = msg;
     resultEl.className = `mt-6 text-center text-lg font-semibold ${
       isSuccess ? 'text-green-600' : 'text-red-600'
     }`;
 
     if (isSuccess) {
-      document.getElementById('return-link').classList.remove('hidden');
+      returnLink.classList.remove('hidden');
     }
   }
 
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-    .then(stream => {
-      video.srcObject = stream;
-      video.play();
-      requestAnimationFrame(tick);
-    })
-    .catch(() => showMessage("Camera access denied", false));
+  const html5QrCode = new Html5Qrcode("qr-reader");
 
-  function tick() {
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-      if (code && !hasScanned) {
-        hasScanned = true;
-        fetch('/fulfill_share', {
-          method: 'POST',
-          headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': "{{ csrf_token() }}"
+  html5QrCode.start(
+    { facingMode: "environment" },
+    {
+      fps: 10,
+      qrbox: { width: 250, height: 250 }
+    },
+    (decodedText, decodedResult) => {
+      // stop scanning after successful read
+      html5QrCode.stop();
+      fetch("/fulfill_share", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": "{{ csrf_token() }}"  // include if CSRF is used
         },
-          body: JSON.stringify({
-            scanned_share_id: code.data,
-            expected_share_id: expectedShareId
-          })
+        body: JSON.stringify({
+          scanned_share_id: decodedText,
+          expected_share_id: expectedShareId
         })
-        .then(res => res.json())
-        .then(data => showMessage(data.message, data.success))
-        .catch(() => showMessage("Scan error occurred", false));
-      }
+      })
+      .then(res => res.json())
+      .then(data => showMessage(data.message, data.success))
+      .catch(() => showMessage("Scan error occurred", false));
+    },
+    errorMessage => {
+      // console.log("QR Scan Error", errorMessage); // Optional: debug output
     }
-    if (!hasScanned) requestAnimationFrame(tick);
-  }
+  ).catch(err => {
+    showMessage("Camera access denied or scanner error", false);
+  });
 </script>
 
 {% endblock %}
