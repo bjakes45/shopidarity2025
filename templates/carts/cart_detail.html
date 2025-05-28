@@ -89,7 +89,7 @@
                     <!-- Actions: Fulfillment or Rating -->
                     <div class="flex items-center mt-2 sm:mt-0 space-x-4">
 
-                        {% if share.approved and not share.is_fulfilled and is_pickup_day %}
+                        {% if share.approved and not share.fulfilled_at and is_pickup_day %}
                             {% if current_user.id == share.user_id %}
                             <a href="{{ url_for('generate_cartshare_qr', share_id=share.id) }}" class="text-blue-600 hover:text-blue-800">
                                 Fulfillment <i class="fas fa-qrcode"></i>
@@ -99,7 +99,7 @@
                                 Fulfillment <i class="fas fa-barcode"></i>
                             </a>
                             {% endif %}
-                        {% elif share.approved and share.is_fulfilled %}
+                        {% elif share.approved and share.fulfilled_at %}
                             {% if current_user.id == share.user_id %}
                             <!-- Participant: Rate Host -->
                             <form method="POST" action="{{ url_for('rate_host', share_id=share.id) }}" class="flex items-center space-x-2">
