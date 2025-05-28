@@ -8,93 +8,117 @@
 <div class="max-w-4xl mx-auto p-6">
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     
-    <!-- Left: Heading -->
+    <!-- Heading -->
     <div class="sm:w-1/4">
       <h1 class="text-2xl font-bold text-gray-800">Product Lookup</h1>
     </div>
 
-    <!-- Right: Search Form -->
-    <form method="get" action="/products" class="w-full flex flex-col sm:flex-row gap-2 sm:w-3/4">
+    <!-- Search Form -->
+    <form method="get" action="/products" class="flex flex-col sm:flex-row sm:w-3/4 gap-2">
       <input
         type="text"
         name="query"
         placeholder="Search by UPC, Product Name, Category etc..."
         value="{{ query }}"
-        class="w-full sm:w-auto flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <button
         type="submit"
-        class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
       >
         Search
       </button>
     </form>
-    
   </div>
 </div>
 
 {% if show_hero and top_favorited_products %}
-<div class="max-w-3xl mx-auto px-6 py-10" x-data="{ current: 0, count: {{ top_favorited_products|length }} }">
+<!-- Carousel -->
+<div class="max-w-5xl mx-auto px-6 py-10" x-data="carousel({ count: {{ top_favorited_products|length }} })">
   <div class="relative overflow-hidden rounded-lg shadow-lg bg-white">
+
+    <!-- Track Wrapper with Center Padding -->
     <div class="flex transition-transform duration-500 ease-in-out"
-         :style="`transform: translateX(-${current * 100}%); width: ${count * 100}%`">
-      {% for product in top_favorited_products %}
-      <div class="w-full flex-shrink-0 p-6 flex flex-col md:flex-row items-center gap-4">
+       :style="`transform: translateX(-${current * $refs.track.children[0].offsetWidth}px);`"
+       x-ref="track">      {% for product in top_favorited_products %}
+      <div class="w-[600px] flex-shrink-0 px-4 py-6 flex flex-col items-center justify-center ml-20">
         <img src="{{ product.image_url or '/static/default-product.png' }}"
              onerror="this.onerror=null; this.src='/static/default-product.png';"
-             class="w-24 h-24 sm:w-32 sm:h-32 object-contain bg-gray-50 rounded mx-auto" alt="Product image" />
-        <div class="md:max-w-xs text-center md:text-left md:ml-6">
+             class="w-24 h-24 object-contain bg-gray-50 rounded mb-4" alt="Product image" />
+        <div class="text-center">
           <a href="{{ url_for('product_detail', upc=product.upc) }}">
-            <h2 class="text-base font-semibold text-gray-800 hover:underline truncate whitespace-nowrap overflow-hidden max-w-xs" title="{{ product.name }}">
+            <h2 class="text-base font-semibold text-gray-800 hover:underline truncate" title="{{ product.name }}">
               {{ product.name }}
             </h2>
           </a>
           <p class="text-sm text-gray-500">{{ product.category }}</p>
           <p class="text-sm text-gray-600 mt-1">UPC: {{ product.upc }}</p>
-          <p class="text-red-600 mt-2">❤️ {{ product.favorites|length }} {{ t['favorite'] | capitalize }}{{'s' if product.favorites|length > 1}}</p>
+          <p class="text-red-600 mt-2">
+            ❤️ {{ product.favorites|length }} {{ t['favorite'] | capitalize }}{{ 's' if product.favorites|length > 1 }}
+          </p>
         </div>
       </div>
       {% endfor %}
     </div>
 
-    <!-- Controls -->
+    <!-- Carousel Controls -->
     <div class="absolute inset-y-0 left-0 flex items-center px-2 z-10">
-      <button @click="current = (current - 1 + count) % count"
+      <button @click="prev"
               class="bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700 focus:outline-none">
         ‹
       </button>
     </div>
     <div class="absolute inset-y-0 right-0 flex items-center px-2 z-10">
-      <button @click="current = (current + 1) % count"
+      <button @click="next"
               class="bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700 focus:outline-none">
         ›
       </button>
     </div>
   </div>
 
-  <!-- Dots -->
+  <!-- Carousel Dots -->
   <div class="flex justify-center mt-4 space-x-2">
     <template x-for="i in count" :key="i">
-      <button @click="current = i - 1"
+      <button @click="current = i"
               class="w-3 h-3 rounded-full"
-              :class="{'bg-blue-600': current === i - 1, 'bg-gray-300': current !== i - 1}"></button>
+              :class="{ 'bg-blue-600': current === i, 'bg-gray-300': current !== i }"></button>
     </template>
   </div>
 </div>
+
+<!-- Alpine.js Carousel Logic -->
+<script>
+function carousel({ count }) {
+  return {
+    current: 0,
+    count,
+    next() {
+      this.current = (this.current + 1) % this.count;
+    },
+    prev() {
+      this.current = (this.current - 1 + this.count) % this.count;
+    },
+  }
+}
+</script>
 {% endif %}
 
-<div class="max-w-4xl mx-auto px-6">
+<!-- Product Listing -->
+<div class="max-w-4xl mx-auto px-6 py-6">
   {% if not show_hero and not top_favorited_products %}
-    <p class="text-sm text-gray-500 mb-4">
-      Found {{ total_display }} product{{ total_display != 1 and 's' or '' }}
-    </p>
+  <p class="text-sm text-gray-500 mb-4">
+    Found {{ total_display }} product{{ 's' if total_display != 1 }}
+  </p>
   {% endif %}
 
-  <!-- Product List -->
-  {{ render_products(pagination, current_user, t) }}
-  {{ render_pagination(page, total_pages, url_builder) }}
+  <div class="p-4">
+    {{ render_products(pagination, current_user, t) }}
+    {{ render_pagination(page, total_pages, url_builder) }}
+  </div>
 
-  <p class="text-sm text-gray-500 mt-4">Total products in database: {{ db_total }}</p>
+  <p class="text-sm text-gray-500">
+    Total products in database: {{ db_total }}
+  </p>
 </div>
 
 {% endblock %}
