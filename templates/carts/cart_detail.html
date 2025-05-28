@@ -3,163 +3,184 @@
 {% block content %}
 <div class="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow space-y-8">
 
+    <!-- 🛒 Product Info -->
+    <div>
+        <a href="{{ url_for('product_detail', upc=cart.product.upc) }}">
+            <h1 class="text-3xl font-bold text-gray-800">{{ cart.product.name or "Unnamed Product" }}</h1>
+        </a>
+    </div>
 
-	<!-- 🛒 Product  -->
-	<div>
-		<a href="{{ url_for('product_detail', upc=cart.product.upc) }}">		
-			<h1 class="text-3xl font-bold text-gray-800">{{ cart.product.name if cart.product else "Unnamed Product" }}</h1>
-		</a>
-	</div>
+    <!-- 🔢 Cart Details -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-50 p-5 rounded-lg shadow-inner space-y-2">
+            <a href="{{ url_for('deal_detail', deal_id=cart.deal.id) }}">
+                <h3 class="text-lg font-semibold text-gray-700">Cost & Deal Info</h3>
+            </a>
+            <p><strong>Total Cost:</strong> ${{ "%.2f"|format(cart.total_cost) }}</p>
+            <p><strong>Shares:</strong> {{ cart.share_count }}</p>
+            <p><strong>Share Cost:</strong> ${{ "%.2f"|format(cart.share_cost()) }}</p>
+            <p><strong>Host:</strong> {{ cart.host.username }}</p>
+            <p><strong>Store:</strong> {{ cart.store_name or cart.deal.store }}</p>
+            {% if cart.expiry %}
+                <p><strong>Expires:</strong> {{ cart.expiry.strftime('%Y-%m-%d %H:%M') }}</p>
+            {% endif %}
+        </div>
+        <div class="bg-gray-50 p-5 rounded-lg shadow-inner space-y-2">
+            <h3 class="text-lg font-semibold text-gray-700">Cart Settings</h3>
+            <p><strong>Tax Applied:</strong> {{ "Yes" if cart.tax_applied else "No" }}</p>
+            {% if cart.tax_applied %}
+                <p><strong>Tax Rate:</strong> {{ cart.tax_rate }}%</p>
+            {% endif %}
+            <p><strong>Privacy:</strong> {{ cart.privacy|title }}</p>
+            <p><strong>Payment Method:</strong> {{ cart.payment_method }}</p>
+            <p><strong>Payment Timing:</strong> {{ cart.payment_timing }}</p>
+            <p><strong>Fulfilled:</strong> {{ "Yes" if cart.is_fulfilled else "No" }}</p>
+        </div>
+    </div>
 
-	<!-- 🔢 Cost & Logistics -->
-	<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-		<div class="bg-gray-50 p-5 rounded-lg shadow-inner space-y-2">
-			<a href="{{ url_for('deal_detail', deal_id=cart.deal.id)}}">
-				<h3 class="text-lg font-semibold text-gray-700">Cost & Deal Info</h3>
-			</a>
-			<p><strong>Total Cost:</strong> ${{ "%.2f"|format(cart.total_cost) }}</p>
-			<p><strong>Shares:</strong> {{ cart.share_count }}</p>
-			<p><strong>Share Cost:</strong> ${{ "%.2f"|format(cart.share_cost()) }}</p>
-			<p><strong>Host:</strong> {{ cart.host.username }}</p>
-			<p><strong>Store:</strong> {{ cart.store_name or cart.deal.store }}</p>
-			{% if cart.expiry %}
-			<p><strong>Expires:</strong> {{ cart.expiry.strftime('%Y-%m-%d %H:%M') }}</p>
-			{% endif %}
-		</div>
-		<div class="bg-gray-50 p-5 rounded-lg shadow-inner space-y-2">
-			<h3 class="text-lg font-semibold text-gray-700">Cart Settings</h3>
-			<p><strong>Tax Applied:</strong> {{ "Yes" if cart.tax_applied else "No" }}</p>
-			{% if cart.tax_applied %}
-			<p><strong>Tax Rate:</strong> {{ cart.tax_rate }}%</p>
-			{% endif %}
-			<p><strong>Privacy:</strong> {{ cart.privacy|title }}</p>
-			<p><strong>Payment Method:</strong> {{ cart.payment_method }}</p>
-			<p><strong>Payment Timing:</strong> {{ cart.payment_timing }}</p>
-			<p><strong>Fulfilled:</strong> {{ "Yes" if cart.is_fulfilled else "No" }}</p>
-		</div>
-	</div>
+    <p class="text-gray-600 mt-2">{{ cart.description }}</p>
 
-	<p class="text-gray-600 mt-2">{{ cart.description }}</p>
+    <!-- 📦 Pickup Info -->
+    <div class="bg-blue-50 border border-blue-200 p-5 rounded-lg shadow-sm">
+        <h2 class="text-2xl font-bold text-blue-700 mb-2">📦 Pickup Information</h2>
+        <p class="text-lg text-gray-800">
+            <a href="https://www.google.com/maps/dir/?api=1&origin={{ current_user.latitude }},{{ current_user.longitude }}&destination={{ cart.latitude }},{{ cart.longitude }}" target="_blank">
+                <strong>Directions to:</strong> {{ cart.pickup_location() or "To be announced" }}
+            </a>
+        </p>
+        <p class="text-lg text-gray-800"><strong>Pickup Time:</strong> {{ cart.pickup_date.strftime('%Y-%m-%d') if not is_pickup_day else "Today" }} - {{ cart.pickup_time.strftime('%H:%M') }}</p>
+    </div>
 
-	<!-- 🚚 Pickup Details Callout -->
-	<div class="bg-blue-50 border border-blue-200 p-5 rounded-lg shadow-sm">
-		<h2 class="text-2xl font-bold text-blue-700 mb-2">📦 Pickup Information</h2>
-		<p class="text-lg text-gray-800">
-			<a href="https://www.google.com/maps/dir/?api=1&origin={{ current_user.latitude }},{{ current_user.longitude }}&destination={{ cart.latitude }},{{ cart.longitude }}" target="_blank">
-				<strong>Directions to:</strong> {{ cart.pickup_location() or "To be announced" }}</p>
-			</a>
-			<p class="text-lg text-gray-800"><strong>Pickup Time:</strong> {{ cart.pickup_date.strftime('%Y-%m-%d') if not is_pickup_day else "Today"}} - {{ cart.pickup_time.strftime('%H:%M') }}</p>
-		</div>
-		<!-- 👥 Participant List -->
-		<div>
-			<h2 class="text-2xl font-semibold text-gray-800 mb-4">Participants</h2>
-			<ul class="divide-y divide-gray-200 bg-white rounded-lg shadow-sm">
-				{% for share in cart.shares if not share.deleted %}
-				<li class="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-					<div class="flex items-center space-x-3">
-						{% if share.user %}
-						<!-- Username & Badges -->
-						<div class="flex flex-col">
-							<span class="font-medium text-gray-800">{{ share.user.username }}</span>
-							<div class="flex space-x-1 mt-1">
-								{% set user_badges = user_badges_dicts.get(share.user.id, {}) %}
-								{% for badge in badges %}
-								{% set user_badge = user_badges.get(badge.id) %}
-								{% if user_badge %}
-								<div class="w-5 h-5 flex items-center justify-center rounded-full 
-								{{ color_map.get(user_badge.color, 'bg-gray-300') }}"
-								title="{{ badge.title }} (Level {{ user_badge.level }})">
-								<i class="fa {{ badge.fa_icon }} text-white fa-xs"></i>
-							</div>
-							{% endif %}
-							{% endfor %}
-						</div>
-					</div>
+    <!-- 👥 Participant List -->
+    <div>
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Participants</h2>
+        <ul class="divide-y divide-gray-200 bg-white rounded-lg shadow-sm">
+            {% for share in cart.shares if not share.deleted %}
+            <li class="px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 w-full justify-between">
+                    {% if share.user %}
+                    <div>
+                        <span class="font-medium text-gray-800">{{ share.user.username }}</span>
+                        <div class="flex space-x-1 mt-1">
+                            {% set user_badges = user_badges_dicts.get(share.user.id, {}) %}
+                            {% for badge in badges %}
+                                {% set user_badge = user_badges.get(badge.id) %}
+                                {% if user_badge %}
+                                <div class="w-5 h-5 rounded-full flex items-center justify-center {{ color_map.get(user_badge.color, 'bg-gray-300') }}"
+                                     title="{{ badge.title }} (Level {{ user_badge.level }})">
+                                    <i class="fa {{ badge.fa_icon }} text-white fa-xs"></i>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
 
-					<!-- Status -->
-					<span class="text-sm mt-2 sm:mt-0 sm:ml-4">
-						{% if not share.approved %}
-						<span class="text-yellow-600">⏳ Awaiting Approval</span>
-						{% elif share.is_fulfilled %}
-						<span class="text-green-600">✅ Fulfilled</span>
-						{% else %}
-						<span class="text-blue-600">✔️ Approved</span>
+                    <!-- Status Label -->
+                    <span class="text-sm mt-2 sm:mt-0">
+                        {% if not share.approved %}
+                            <span class="text-yellow-600">⏳ Awaiting Approval</span>
+                        {% elif share.is_fulfilled %}
+                            <span class="text-green-600">✅ Fulfilled</span>
+                        {% else %}
+                            <span class="text-blue-600">✔️ Approved</span>
+                        {% endif %}
+                    </span>
 
-						{% endif %}
-					</span>
-					{% else %}
-					<span class="italic text-gray-400">Unclaimed slot</span>
-					{% endif %}
-				</div>
+                    <!-- Actions: Fulfillment or Rating -->
+                    <div class="flex items-center mt-2 sm:mt-0 space-x-4">
 
-				{% if share.approved and not share.is_fulfilled  and is_pickup_day%}
-				<div class="mt-2 sm:mt-0 sm:ml-4 flex items-center space-x-2">
-					{% if current_user.id == share.user_id %}
-					<!-- Participant QR Code -->
-					<a href="{{ url_for('generate_cartshare_qr', share_id=share.id) }}"
-					class="text-blue-600 hover:text-blue-800" title="Show QR Code for Fulfillment">
-					<span class="text-blue-600 hover:text-blue-800">Fulfillment</span>
-					<i class="fas fa-qrcode"></i>
-					<span class="sr-only">Show QR Code</span>
-				</a>
-				{% elif current_user.id == cart.host_id and is_pickup_day%}
-				<!-- Host Scanner Link -->
-				<a href="{{ url_for('render_fulfillment_scanner', share_id=share.id) }}"
-				class="text-green-600 hover:text-green-800" title="Open Scanner to Fulfill Share">
-				<span class="text-green-600 hover:text-green-800">Fulfillment</span>
-				<i class="fas fa-barcode"></i>
-				<span class="sr-only">Open Scanner</span>
-			</a>
-			{% endif %}
-		</div>
-		{% endif %}
-		<!-- Host-only Approval Buttons -->
-		{% if user.id == cart.host_id and share.user and not share.approved %}
-		<div class="flex space-x-2 mt-3 sm:mt-0 sm:ml-4">
-			<form method="POST" action="{{ url_for('approve_share', share_id=share.id) }}">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-				<button type="submit" class="text-sm text-green-700 hover:underline">Approve</button>
-			</form>
-			<form method="POST" action="{{ url_for('reject_share', share_id=share.id) }}">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-				<button type="submit" class="text-sm text-red-600 hover:underline">Reject</button>
-			</form>
-		</div>
-		{% endif %}
-	</li>
-	{% endfor %}
-</ul>
-</div>
+                        {% if share.approved and not share.is_fulfilled and is_pickup_day %}
+                            {% if current_user.id == share.user_id %}
+                            <a href="{{ url_for('generate_cartshare_qr', share_id=share.id) }}" class="text-blue-600 hover:text-blue-800">
+                                Fulfillment <i class="fas fa-qrcode"></i>
+                            </a>
+                            {% elif current_user.id == cart.host_id %}
+                            <a href="{{ url_for('render_fulfillment_scanner', share_id=share.id) }}" class="text-green-600 hover:text-green-800">
+                                Fulfillment <i class="fas fa-barcode"></i>
+                            </a>
+                            {% endif %}
+                        {% elif share.approved and share.is_fulfilled %}
+                            {% if current_user.id == share.user_id %}
+                            <!-- Participant: Rate Host -->
+                            <form method="POST" action="{{ url_for('rate_host', share_id=share.id) }}" class="flex items-center space-x-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <label for="rating-{{ share.id }}">Rate Host:</label>
+                                <select name="rating" id="rating-{{ share.id }}" class="border rounded px-2 py-1 text-sm">
+                                    <option value="5">⭐️⭐️⭐️⭐️⭐️</option>
+                                    <option value="4">⭐️⭐️⭐️⭐️</option>
+                                    <option value="3">⭐️⭐️⭐️</option>
+                                    <option value="2">⭐️⭐️</option>
+                                    <option value="1">⭐️</option>
+                                </select>
+                                <button type="submit" class="text-blue-600 hover:underline text-sm">Submit</button>
+                            </form>
+                            {% elif current_user.id == cart.host_id %}
+                            <!-- Host: Rate Participant -->
+                            <form method="POST" action="{{ url_for('rate_participant', share_id=share.id) }}" class="flex items-center space-x-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <label for="rating-{{ share.id }}">Rate:</label>
+                                <select name="rating" id="rating-{{ share.id }}" class="border rounded px-2 py-1 text-sm">
+                                    <option value="5">⭐️⭐️⭐️⭐️⭐️</option>
+                                    <option value="4">⭐️⭐️⭐️⭐️</option>
+                                    <option value="3">⭐️⭐️⭐️</option>
+                                    <option value="2">⭐️⭐️</option>
+                                    <option value="1">⭐️</option>
+                                </select>
+                                <button type="submit" class="text-green-600 hover:underline text-sm">Submit</button>
+                            </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
 
+                    <!-- Host Approval Buttons -->
+                    {% if current_user.id == cart.host_id and share.user and not share.approved %}
+                    <div class="flex space-x-2 mt-2 sm:mt-0">
+                        <form method="POST" action="{{ url_for('approve_share', share_id=share.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-green-700 hover:underline text-sm">Approve</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('reject_share', share_id=share.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-red-600 hover:underline text-sm">Reject</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <span class="italic text-gray-400">Unclaimed slot</span>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
 
-<!-- 🙋 Share Request -->
-{% set user_has_share = cart.shares | selectattr('user_id', 'equalto', user.id) | list | length > 0 %}
-{% set unclaimed_shares = cart.shares | selectattr('user_id', 'equalto', none) | rejectattr('deleted') | list | length %}
-
-{% if user.is_authenticated %}
-{% if not user_has_share and unclaimed_shares > 0 %}
-<div class="mt-6">
-	<h2 class="text-xl font-semibold text-gray-800">Request a Share</h2>
-	<form method="POST" action="{{ url_for('cart_detail', cart_id=cart.id) }}" class="mt-2">
-		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		{% if cart.max_shares > 1 %}
-            <label for="requested_shares" class="block mb-2 text-sm font-medium text-gray-700">How many shares would you like?</label>
-            <input type="number" name="requested_shares" id="requested_shares"
-                   min="1" max="{{ cart.max_shares }}" value="1"
-                   class="w-24 p-2 border border-gray-300 rounded-md mb-4">
+    <!-- 🙋 Request Share -->
+    {% set user_has_share = cart.shares | selectattr('user_id', 'equalto', user.id) | list | length > 0 %}
+    {% set unclaimed_shares = cart.shares | selectattr('user_id', 'equalto', none) | rejectattr('deleted') | list | length %}
+    
+    {% if user.is_authenticated %}
+        {% if not user_has_share and unclaimed_shares > 0 %}
+        <div class="mt-6">
+            <h2 class="text-xl font-semibold text-gray-800">Request a Share</h2>
+            <form method="POST" action="{{ url_for('cart_detail', cart_id=cart.id) }}" class="mt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if cart.max_shares > 1 %}
+                    <label for="requested_shares" class="block text-sm font-medium text-gray-700 mb-1">How many shares would you like?</label>
+                    <input type="number" name="requested_shares" id="requested_shares" min="1" max="{{ cart.max_shares }}" value="1"
+                           class="w-24 p-2 border border-gray-300 rounded-md mb-4">
+                {% endif %}
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Request Share for ${{ "%.2f"|format(cart.share_cost()) }}
+                </button>
+            </form>
+        </div>
+        {% elif user_has_share %}
+            <p class="mt-4 text-green-700 font-semibold">You’ve already requested a share.</p>
+        {% else %}
+            <p class="mt-4 text-red-600 font-semibold">No shares left — this cart is full.</p>
         {% endif %}
-		<button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-			Request Share for ${{ "%.2f"|format(cart.share_cost()) }}
-		</button>
-	</form>
-</div>
-{% elif user_has_share %}
-<p class="mt-4 text-green-700 font-semibold">You’ve already requested a share.</p>
-{% else %}
-<p class="mt-4 text-red-600 font-semibold">No shares left — this cart is full.</p>
-{% endif %}
-{% else %}
-<p class="mt-4 text-blue-700">Please <a href="{{ url_for('auth.login') }}" class="underline">log in</a> to request a share.</p>
-{% endif %}
+    {% else %}
+        <p class="mt-4 text-blue-700">Please <a href="{{ url_for('auth.login') }}" class="underline">log in</a> to request a share.</p>
+    {% endif %}
 </div>
 {% endblock %}

@@ -1583,6 +1583,21 @@ def fulfill_share():
 
     return jsonify({'success': True, 'message': 'Share successfully fulfilled!'})
 
+@app.route('/rate_host/<int:share_id>', methods=['POST'])
+@login_required
+def rate_host(share_id):
+    rating = int(request.form['rating'])
+    # Save rating to DB, associated with host + share
+    flash("Thanks for rating the host!")
+    return redirect(request.referrer)
+
+@app.route('/rate_participant/<int:share_id>', methods=['POST'])
+@login_required
+def rate_participant(share_id):
+    rating = int(request.form['rating'])
+    # Save rating to DB, associated with participant + share
+    flash("Thanks for rating the participant!")
+    return redirect(request.referrer)
 
 
 @app.route("/faq")
