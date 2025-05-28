@@ -14,17 +14,17 @@
     </div>
 
     <!-- Right: Search Form -->
-    <form method="get" action="/products" class="flex flex-col sm:flex-row sm:w-3/4 gap-2">
+    <form method="get" action="/products" class="w-full flex flex-col sm:flex-row gap-2 sm:w-3/4">
       <input
         type="text"
         name="query"
         placeholder="Search by UPC, Product Name, Category etc..."
         value="{{ query }}"
-        class="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="w-full sm:w-auto flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <button
         type="submit"
-        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
       >
         Search
       </button>
@@ -32,39 +32,39 @@
     
   </div>
 </div>
+
 {% if show_hero and top_favorited_products %}
 <div class="max-w-3xl mx-auto px-6 py-10" x-data="{ current: 0, count: {{ top_favorited_products|length }} }">
   <div class="relative overflow-hidden rounded-lg shadow-lg bg-white">
     <div class="flex transition-transform duration-500 ease-in-out"
          :style="`transform: translateX(-${current * 100}%); width: ${count * 100}%`">
       {% for product in top_favorited_products %}
-      <div class="w-full flex-shrink-0 p-6 flex flex-col sm:flex-row items-center gap-4">
+      <div class="w-full flex-shrink-0 p-6 flex flex-col md:flex-row items-center gap-4">
         <img src="{{ product.image_url or '/static/default-product.png' }}"
              onerror="this.onerror=null; this.src='/static/default-product.png';"
-             class="w-32 h-32 ml-12 object-contain bg-gray-50 rounded" alt="Product image" />
-        <div class="max-w-xs ml-6">
-  <a href="{{ url_for('product_detail', upc=product.upc) }}">
-  <h2 class="text-base font-semibold text-gray-800 hover:underline truncate whitespace-nowrap overflow-hidden max-w-xs text-center" title="{{ product.name }}">
-    {{ product.name }}
-  </h2>
-  </a>        
-  <p class="text-sm text-gray-500 text-center">{{ product.category }}</p>
-  <p class="text-sm text-gray-600 mt-1 text-center">UPC: {{ product.upc }}</p>
-  <p class="text-red-600 mt-2 text-center">❤️ {{ product.favorites|length }} {{ t['favorite'] | capitalize }}{{'s' if product.favorites|length > 1}}</p>
-</div>
-
+             class="w-24 h-24 sm:w-32 sm:h-32 object-contain bg-gray-50 rounded mx-auto" alt="Product image" />
+        <div class="md:max-w-xs text-center md:text-left md:ml-6">
+          <a href="{{ url_for('product_detail', upc=product.upc) }}">
+            <h2 class="text-base font-semibold text-gray-800 hover:underline truncate whitespace-nowrap overflow-hidden max-w-xs" title="{{ product.name }}">
+              {{ product.name }}
+            </h2>
+          </a>
+          <p class="text-sm text-gray-500">{{ product.category }}</p>
+          <p class="text-sm text-gray-600 mt-1">UPC: {{ product.upc }}</p>
+          <p class="text-red-600 mt-2">❤️ {{ product.favorites|length }} {{ t['favorite'] | capitalize }}{{'s' if product.favorites|length > 1}}</p>
+        </div>
       </div>
       {% endfor %}
     </div>
 
     <!-- Controls -->
-    <div class="absolute inset-y-0 left-0 flex items-center px-2">
+    <div class="absolute inset-y-0 left-0 flex items-center px-2 z-10">
       <button @click="current = (current - 1 + count) % count"
               class="bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700 focus:outline-none">
         ‹
       </button>
     </div>
-    <div class="absolute inset-y-0 right-0 flex items-center px-2">
+    <div class="absolute inset-y-0 right-0 flex items-center px-2 z-10">
       <button @click="current = (current + 1) % count"
               class="bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700 focus:outline-none">
         ›
@@ -83,18 +83,18 @@
 </div>
 {% endif %}
 
+<div class="max-w-4xl mx-auto px-6">
+  {% if not show_hero and not top_favorited_products %}
+    <p class="text-sm text-gray-500 mb-4">
+      Found {{ total_display }} product{{ total_display != 1 and 's' or '' }}
+    </p>
+  {% endif %}
 
-<div>
-{% if not show_hero and not top_favorited_products %}
-  <p class="text-sm text-gray-500 mb-4">
-    Found {{ total_display }} product{{ total_diplay != 1 and 's' or '' }}
-  </p>
-{% endif %}
   <!-- Product List -->
-      {{ render_products(pagination, current_user, t) }}
-      {{ render_pagination(page, total_pages, url_builder) }}
+  {{ render_products(pagination, current_user, t) }}
+  {{ render_pagination(page, total_pages, url_builder) }}
 
-  <p class="text-sm text-gray-500">Total products in database: {{ db_total }}</p>
+  <p class="text-sm text-gray-500 mt-4">Total products in database: {{ db_total }}</p>
 </div>
 
 {% endblock %}
