@@ -24,6 +24,10 @@
   <p class="text-sm text-gray-500 mt-3 text-center">
     Align the QR code within the frame to fulfill the participant’s share.
   </p>
+
+    <a href="{{ url_for('cart_detail', cart_id=share.cart.id) }}" class="text-blue-600 hover:underline">
+    Back to Collective Cart
+  </a>
 </div>
 
 <!-- html5-qrcode library -->
@@ -52,7 +56,7 @@
     { facingMode: "environment" },
     {
       fps: 10,
-      qrbox: { width: 250, height: 250 }
+      qrbox: { width: 350, height: 350 }
     },
     (decodedText, decodedResult) => {
       // stop scanning after successful read
@@ -64,7 +68,7 @@
           "X-CSRFToken": "{{ csrf_token() }}"  // include if CSRF is used
         },
         body: JSON.stringify({
-          scanned_share_id: decodedText,
+          scanned_token: decodedText,
           expected_share_id: expectedShareId
         })
       })
