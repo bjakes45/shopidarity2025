@@ -46,7 +46,7 @@
           <tr>
             <td class="px-4 py-3">🌱 Ethical Consumers</td>
             <td class="px-4 py-3">Support brands that match their values</td>
-            <td class="px-4 py-3">Favorite ethical products and discover value-aligned product groups</td>
+            <td class="px-4 py-3">{{t['favorite'] | capitalize}} ethical products and discover value-aligned product groups</td>
           </tr>
           <tr>
             <td class="px-4 py-3">📦 Local Coordinators</td>
@@ -72,7 +72,7 @@
             <div class="mt-2 text-gray-700">
                 <ol class="list-decimal ml-5 space-y-1">
                     <li>Scan a barcode - Add a new product if it isn't already in our library</li>
-                    <li>Rate, favorite and comment on the products you buy everyday.</li>
+                    <li>Rate, {{t['favorite']}} and comment on the products you buy everyday.</li>
                     <li>Add a deal – via link, receipt, API, or manually</li>
                     <li>Find like-minded shoppers and form product groups</li>
                     <li>Host or join a Collective Cart to bulk buy together</li>
@@ -95,14 +95,14 @@
 
         <details class="bg-white p-4 rounded-xl shadow-sm group">
         	<summary class="cursor-pointer font-semibold text-lg group-open:text-indigo-600">
-        		❤️ Why is there a Maximum Favorites?
+        		❤️ Why is there a Maximum {{t['favorite'] | capitalize}}s?
         	</summary>
         	<div class="mt-2 text-gray-700">
-        		<p class="mb-2">On Shopidarity we have Favorites button, instead of Like buttons.</p> 
-        		<p class="mb-2">This is an intentional choice to help users deeply consider which products they give their favorites to.</p>
-        		<p class="mb-2">Unlike the Like buttons on other websites, which are given freely and without second thought, when a Shopidarity user favorites a product: that is a true indication of intent and desire.</p>
-        		<p class="mb-2">Making favorites more rare makes their data much more relevant to our  discovery algorithms, but also ensures that you aren't cluttered with useless and irrelevant product or group suggestions</p>
-        		<p class="mb-2">If you ever feel like you do not have enough Favorites, try leveling up your badges to unlock more.</p>
+        		<p class="mb-2">On Shopidarity we have {{t['favorite'] | capitalize}}s button, instead of Like buttons.</p> 
+        		<p class="mb-2">This is an intentional choice to help users deeply consider which products they give their {{t['favorite']}}s to.</p>
+        		<p class="mb-2">Unlike the Like buttons on other websites, which are given freely and without second thought, when a Shopidarity user {{t['favorite']}}s a product: that is a true indication of intent and desire.</p>
+        		<p class="mb-2">Making {{t['favorite']}}s more rare makes their data much more relevant to our  discovery algorithms, but also ensures that you aren't cluttered with useless and irrelevant product or group suggestions</p>
+        		<p class="mb-2">If you ever feel like you do not have enough {{t['favorite'] | capitalize}}s, try leveling up your badges to unlock more.</p>
         		<p class="mb-2">The more you indicate your preferences on our system the better it will get at suggesting new products, great deals and folks interested in bulk buying the things you already buy to save money.</p>
         	</div>
         </details>
@@ -132,7 +132,7 @@
                 📍 What are product groups?
             </summary>
             <div class="mt-2 text-gray-700">
-                Join a local group focused on a specific product. Like like a fan club, but for your favorite products. Get alerts for deals and Collective Carts in your area, and coordinate pickups together.
+                Join a local group focused on a specific product. Like like a fan club, but for your {t['favorite']} products. Get alerts for deals and Collective Carts in your area, and coordinate pickups together.
             </div>
         </details>
 

@@ -3,10 +3,9 @@
 <div class="max-w-5xl mx-auto px-4 py-8 space-y-10">
 
 	<!-- Title -->
-	<h1 class="text-3xl font-bold text-gray-900 text-center">
-		<a href="{{ url_for('product_detail', upc=deal.product.upc) }}" class="hover:underline">{{ deal.product.name }}</a> at {{ deal.store }}
+	<h1 class="text-2xl font-bold text-gray-900 text-center">
+		<a href="{{ url_for('product_detail', upc=deal.product.upc) }}" class="hover:underline">{{ deal.product.name }}</a> 
 	</h1>
-
 
 	<!-- Grid: Details + Map -->
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -16,14 +15,11 @@
 			<p><span class="font-semibold">Price:</span> ${{ "%.2f"|format(deal.price) }}</p>
 			<p><span class="font-semibold">Description:</span> {{ deal.product.description }}</p>
 			<p><span class="font-semibold">Category:</span> {{ deal.product.category }}</p>
-			<p><span class="font-semibold">Store:</span> {{ deal.store }}</p>
-			<p><span class="font-semibold">Location:</span> 
-				{% if deal.latitude and deal.longitude %}
-				{{ deal.latitude }}, {{ deal.longitude }}
-				{% else %}
-				<span class="italic text-gray-500">Online deal</span>
-				{% endif %}
-			</p>
+			{% if deal.store %}
+    			<p><span class="font-semibold">Store:</span> {{ deal.store }}</p>
+    		{% elif deal.url %}
+    			<p><span class="font-semibold">URL:</span> {{ deal.url }}</p>
+    		{% endif %}
 			<p class="text-sm text-gray-500"><span class="font-semibold">Posted by:</span> {{ deal.user.username }}</p>
 		</div>
 
@@ -100,15 +96,15 @@
 		🛒 Host a Collective Cart
 	</a>
 	{% endif %}
-	{% if deal.collective_carts %}
+	{% if carts %}
 	<a href="{{ url_for('deal_carts', deal_id=deal.id)}}" 
 	class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-semibold px-8 py-4 rounded-xl shadow-lg transition duration-200">
 	🛒 Join a Collective Cart
 </a>
-{% endif %}
 <p class="text-gray-500 text-sm">
 	Coordinate with others to buy this deal together!
 </p>
+{% endif %}
 </div>
 
 </div>

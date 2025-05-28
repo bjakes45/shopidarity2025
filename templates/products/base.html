@@ -45,7 +45,7 @@
       <form method="post" action="{{ url_for('unfavorite', upc=product.upc) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="text-red-600 border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition text-sm">
-          ❤️ Remove Favorite
+          ❤️ Remove {{t['favorite'] | capitalize}}
         </button>
       </form>
       <!-- Alert Toggle (working version) -->
@@ -62,7 +62,7 @@
       <form method="post" action="{{ url_for('favorite', upc=product.upc) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="text-blue-600 border border-blue-600 px-3 py-1 rounded hover:bg-blue-50 transition text-sm">
-          ❤️ Favorite
+          ❤️ {{t['favorite'] | capitalize}}
         </button>
       </form>
       {% endif %}
@@ -134,11 +134,13 @@
   <main class="flex-1 overflow-y-auto lg:overflow-y-auto p-6 space-y-10">
     <div id="info" class="flex flex-col sm:flex-row items-center sm:items-start sm:gap-6 mb-4">
       <div class="mb-4 sm:mb-0">
-        {% if product.image_url %}
-        <img src="{{ product.image_url }}" id="image-url" class="w-40 sm:w-48 mx-auto sm:mx-0" alt="Product Image" />
-        {% else %}
-        <img src="/static/default-product.png" id="image-url" class="w-40 sm:w-48 mx-auto sm:mx-0" alt="Default Product Image" />
-        {% endif %}
+        <img
+          src="{{ product.image_url or '/static/default-product.png' }}"
+          alt="Product Image"
+          id="image-url"
+          class="w-40 sm:w-48 mx-auto sm:mx-0"
+          onerror="this.onerror=null; this.src='/static/default-product.png';"
+        />
       </div>
 
       <div class="text-center sm:text-left">

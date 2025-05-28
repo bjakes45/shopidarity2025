@@ -39,9 +39,8 @@
             <div class="flex justify-between items-center">
               <div>
                 <h3 class="font-semibold">{{ invite.group.name }}</h3>
-                <p class="text-sm text-gray-500">Invited by: {{ invite.user.username }}</p>
+                <p class="text-sm text-gray-500">Invited by: {{ invite.group.user.username }}</p>
               </div>
-              <!-- Optional: Accept/Decline buttons can go here -->
               <div class="flex gap-2">
                 <form method="post" action="{{ url_for('accept_invite', invite_id=invite.id) }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> 

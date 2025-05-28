@@ -66,7 +66,7 @@
 			<select name="privacy" id="privacy"
 			class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
 			<option value="public">Public</option>
-			<option value="user_only">Only Me</option>
+			<option value="user_only">Site Members Only</option>
 			<option value="group_only">My Groups</option>
 		</select>
 	</div>
@@ -99,7 +99,7 @@
 	</div>
 	<div>
 		<label for="pickup_time" class="block text-sm text-gray-600 font-medium">Pickup Time</label>
-		<input type="time" name="pickup_time" id="pickup_time"
+		<input type="time" name="pickup_time" id="pickup_time" value="12:00 PM"
 		class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
 	</div>
 </div>
@@ -111,8 +111,8 @@
 		<label for="payment_timing" class="block text-sm text-gray-600">Payment Timing</label>
 		<select name="payment_timing" id="payment_timing"
 		class="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring focus:border-blue-300">
-		<option value="upfront">Upfront</option>
 		<option value="delivery">On Delivery</option>
+		<option value="upfront">Upfront</option>
 	</select>
 </div>
 <div class="w-1/2">

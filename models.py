@@ -1,6 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from enum import Enum
 from sqlalchemy import func
 from sqlalchemy import Enum as SQLEnum
@@ -36,13 +36,14 @@ class User(db.Model, UserMixin):
     deal_distance = db.Column(db.Float, default=20.0)  # distance in km or miles
 
     #Favorites limited to increase curation incentive
-    max_favorites = db.Column(db.Integer, default=50)
+    max_favorites = db.Column(db.Integer, default=10)
     
     #SCHEMA RELATIONSHIPS
     favorites = db.relationship('Favorite', back_populates='user', cascade='all, delete-orphan')
     ratings = db.relationship('Rating', back_populates='user', cascade='all, delete-orphan')
     comments = db.relationship('Comment', back_populates='user', cascade='all, delete-orphan')
     deals = db.relationship('Deal', back_populates='user')
+    groups = db.relationship('Group', back_populates='user')
     user_badges = db.relationship('UserBadge', backref='user')
     
     #METHODS
@@ -341,7 +342,7 @@ class CollectiveCart(db.Model):
     expiry = db.Column(db.DateTime, nullable=True)  # optional unless deal is on_sale
     tax_applied = db.Column(db.Boolean, default=False)
     tax_rate = db.Column(db.Float, default=0.0)
-    privacy = db.Column(db.String(50))  # 'public', 'user_only', 'group_only'
+    privacy = db.Column(db.String(50), default='public')  # 'public', 'user_only', 'group_only'
     payment_timing = db.Column(db.String(50))  # 'upfront', 'delivery'
     payment_method = db.Column(db.String(50))  # 'cash', 'etransfer', 'venmo', etc.
 
@@ -358,8 +359,8 @@ class CollectiveCart(db.Model):
 
     def pickup_location(self):
         if self.latitude is not None and self.longitude is not None:
-            return f"Near: {abs(self.latitude):.4f}° {'N' if self.latitude >= 0 else 'S'}, " \
-                   f"{abs(self.longitude):.4f}° {'E' if self.longitude >= 0 else 'W'}"
+            return f"Near: {abs(self.latitude):.1f}° {'N' if self.latitude >= 0 else 'S'}, " \
+                   f"{abs(self.longitude):.1f}° {'E' if self.longitude >= 0 else 'W'}"
         return "Location not available"
 
 class CartShare(db.Model):
@@ -368,25 +369,13 @@ class CartShare(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     approved = db.Column(db.Boolean, default=False)
     fulfilled = db.Column(db.Boolean, default=False)
+    fulfilled_at = db.Column(db.DateTime, nullable=True)
     deleted = db.Column(db.Boolean, default=False)
 
 
     user = db.relationship('User', backref='cart_shares')
     cart = db.relationship('CollectiveCart', back_populates='shares')
 
-class APIUsage(db.Model):
-    __tablename__ = 'api_usage'
-
-    ip = db.Column(db.String(45), primary_key=True)  # IPv6-safe
-    count = db.Column(db.Integer, default=0)
-    remaining = db.Column(db.Integer, default=100)
-    reset_time = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(days=1))
-    reset_timestamp = db.Column(db.DateTime, nullable=True)
-
-    def reset(self, remaining=10):
-        self.count = 1
-        self.remaining = remaining
-        self.reset_time = datetime.utcnow() + timedelta(days=1)
 
 class Message(db.Model):
     __tablename__ = 'messages'
@@ -421,6 +410,7 @@ class Group(db.Model):
     radius_km = db.Column(db.Float, default=30.0)
 
     invites = db.relationship('GroupInvite', back_populates='group', cascade="all, delete-orphan")
+    user = db.relationship('User', backref='group')
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)
@@ -432,11 +422,12 @@ class Group(db.Model):
 class GroupInvite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user = db.relationship('User', foreign_keys=[user_id])
     group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False)
     group = db.relationship('Group', back_populates='invites')
-
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    user = db.relationship('User', backref='group_invites')
+    invited_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # inviter
+    inviter = db.relationship('User', foreign_keys=[invited_by])
 
     accepted = db.Column(db.Boolean, default=False)
     deleted = db.Column(db.Boolean, default=False)
@@ -488,3 +479,22 @@ class UserBadge(db.Model):
             if threshold is not None and self.progress < threshold:
                 return threshold
         return thresholds[-1]["threshold"] if thresholds else None
+
+class APIUsage(db.Model):
+    __tablename__ = 'api_usage'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    ip = db.Column(db.String(45), nullable=True)
+    date = db.Column(db.Date, nullable=False, default=date.today)
+
+    # Usage fields (expand as needed)
+    lookup_count = db.Column(db.Integer, default=0)
+    lookup_remaining = db.Column(db.Integer, default=5)
+
+    login_count = db.Column(db.Integer, default=0)
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'date', name='unique_daily_user'),
+        db.UniqueConstraint('ip', 'date', name='unique_daily_ip'),
+    )

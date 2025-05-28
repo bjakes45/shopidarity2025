@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Your Pickup QR Code{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-12 p-6 bg-white shadow rounded text-center">
+  <h2 class="text-2xl font-semibold mb-4">Show This QR Code to the Host</h2>
+  <p class="text-gray-600 mb-6">The host will scan this code to confirm your share pickup.</p>
+
+  <div id="qr-container" class="flex justify-center mb-6">
+    <canvas id="qr-code"></canvas>
+  </div>
+
+  <a href="{{ url_for('cart_detail', cart_id=share.cart.id) }}" class="text-blue-600 hover:underline">
+    Back to Collective Cart
+  </a>
+</div>
+
+<!-- QR code generation -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.0/build/qrcode.min.js"></script>
+<script>
+  const qrData = {{ qr_data|tojson }};
+  const canvas = document.getElementById('qr-code');
+  QRCode.toCanvas(canvas, qrData, { width: 250 }, function (error) {
+    if (error) {
+      console.error('QR Code generation failed:', error);
+    }
+  });
+</script>
+{% endblock %}

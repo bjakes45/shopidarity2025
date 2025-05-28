@@ -36,7 +36,7 @@ class="fixed lg:static z-40 inset-y-0 left-0 w-64 bg-gray-100 transform transiti
   <div id="my-products-subnav" class="ml-4 mt-1 flex flex-col gap-1 hidden">
     <a href="{{ url_for('dashboard_favorites') }}"
        class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-200 transition">
-      Favorites
+      {{t['favorite'] | capitalize}}s
     </a>
     <a href="{{ url_for('dashboard_added_products') }}"
        class="block px-4 py-2 rounded-md text-gray-600 hover:bg-gray-200 transition">

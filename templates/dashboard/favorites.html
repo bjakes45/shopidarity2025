@@ -10,7 +10,7 @@
 
   <!-- Top Row: Title + Settings Cog -->
   <div class="flex items-center justify-between">
-    <h3 class="text-2xl font-bold">My Favorites</h3>
+    <h3 class="text-2xl font-bold">My {{ t['favorite'] | capitalize }}s</h3>
     <div class="relative">
       <button id="settingsToggle" class="text-gray-600 text-xl">
         <i class="fas fa-cog"></i>
@@ -76,7 +76,7 @@
         <form method="post" action="{{ url_for('unfavorite', upc=product.upc) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="border border-red-600 text-red-600 hover:bg-red-50 px-3 py-1 rounded">
-            ❤️ Remove Favorite
+            ❤️ Remove {{ t['favorite'] | capitalize }}
           </button>
         </form>
 
@@ -136,10 +136,10 @@
     document.querySelectorAll('.unfavorite-btn').forEach(button => {
       button.addEventListener('click', async (event) => {
         const favoriteId = event.target.dataset.favoriteId;
-        if (!confirm('Are you sure you want to remove this favorite?')) return;
+        if (!confirm('Are you sure you want to remove this {{t['favorite'] | capitalize}}?')) return;
         try {
           const res = await fetch(`/favorites/${favoriteId}/unfavorite`, {method: 'POST'});
-          if (!res.ok) throw new Error('Failed to unfavorite');
+          if (!res.ok) throw new Error('Failed to un{{t['favorite'] | capitalize}}');
           // Remove card from DOM
           event.target.closest('div.bg-white').remove();
         } catch (err) {

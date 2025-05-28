@@ -5,15 +5,16 @@ import math
 import json
 from collections import defaultdict
 from functools import wraps
-from datetime import datetime, timedelta
-from flask import flash, redirect, request, jsonify
+from datetime import datetime, timedelta, date
+from flask import flash, redirect, request, jsonify, session
 from flask_login import current_user
 from werkzeug.security import generate_password_hash,check_password_hash
+from sqlalchemy import or_, and_
 from faker import Faker
 from math import ceil
 from geopy.distance import geodesic
 
-from models import db, Product, Favorite, Rating, Deal, User, APIUsage, Badge, UserBadge  # adjust paths if needed
+from models import db, Product, Favorite, Rating, Deal, User, APIUsage, Badge, UserBadge, CollectiveCart, Group
 
 faker = Faker()
 
@@ -24,33 +25,69 @@ def get_usage(ip):
     usage = APIUsage.query.get(ip)
     return usage
 
-def enforce_rate_limit(usage, ip):
-    ip=ip
-    usage = usage
-    now = datetime.utcnow()
-
-    if usage:
-        if now > usage.reset_time:
-            usage.reset(remaining=5)
-        elif usage.remaining <= 0:        	
-            flash("You have hit your Product entry limit until tomorrow", "error")
-            return jsonify({"error": "Rate limit exceeded"}), 429
-        else:
-            usage.count += 1
-            usage.remaining -= 1
-            flash("IP: " + str(usage.ip) + " - " + str(usage.remaining) + " Lookups Remaining")
+def get_or_create_usage(user_id=None, ip=None):
+    today = date.today()
+    
+    if user_id:
+        usage = APIUsage.query.filter_by(user_id=user_id, date=today).first()
     else:
+        usage = APIUsage.query.filter_by(ip=ip, date=today).first()
+
+    if not usage:
         usage = APIUsage(
-            ip=ip,
-            count=1,
-            remaining=5,
-            reset_time=now + timedelta(days=1)
+            user_id=user_id if user_id else None,
+            ip=ip if not user_id else None,
+            date=today
         )
         db.session.add(usage)
-        flash("First use by IP: " + str(usage.ip))
+        db.session.commit()
 
+    return usage
+
+def enforce_rate_limit(type='lookup', daily_limit=5):
+    user_id = current_user.get_id() if current_user.is_authenticated else None
+    ip = get_client_ip() if not user_id else None
+
+    usage = get_or_create_usage(user_id=user_id, ip=ip)
+    
+    count_field = f"{type}_count"
+    remaining_field = f"{type}_remaining"
+
+    if not hasattr(usage, count_field) or not hasattr(usage, remaining_field):
+        return jsonify({"error": f"Unknown usage type: {type}"}), 400
+
+    if getattr(usage, remaining_field) <= 0:
+        flash(f"You have hit your {type} limit until tomorrow", "error")
+        return jsonify({"error": "Rate limit exceeded"}), 429
+
+    setattr(usage, count_field, getattr(usage, count_field) + 1)
+    setattr(usage, remaining_field, getattr(usage, remaining_field) - 1)
     db.session.commit()
-    return None  # No error
+
+    flash(f"{type} requests remaining: {getattr(usage, remaining_field)}")
+    return None
+
+from datetime import date, timedelta
+
+def get_login_streak(user_id):
+    if not user_id:
+        return 0
+
+    streak = 0
+    today = date.today()
+
+    for i in range(0, 365):  # optional max cap on streak length
+        day = today - timedelta(days=i)
+        usage = APIUsage.query.filter_by(user_id=user_id, date=day).first()
+
+        if usage and usage.login_count == 1:
+            streak += 1
+        else:
+            break  # streak ended
+
+    return streak
+
+
 
 def login_required_with_redirect_back(func):
     @wraps(func)
@@ -192,61 +229,53 @@ def get_potential_groups(user):
     )
 
     return potential_groups
+def get_rank_for_user_badge(user_badge):
+    progression = user_badge.badge.progression  # This is a list of dicts
+    progress = user_badge.progress or 0
 
-def evaluate_badge_progress(user, badge_name, increment=1):
-    badge = Badge.query.filter_by(name=badge_name).first()
-    if not badge:
-        return
+    # Find all levels where progress meets or exceeds threshold
+    qualified_levels = [level for level in progression if progress >= level.get("threshold", 0)]
 
-    user_badge = UserBadge.query.filter_by(user_id=user.id, badge_id=badge.id).first()
+    if not qualified_levels:
+        return 0  # No rank if progress doesn't meet any threshold
 
-    if not user_badge:
-        user_badge = UserBadge(user_id=user.id, badge_id=badge.id, progress=0)
-        db.session.add(user_badge)
+    # Get the highest rank from qualified levels
+    highest_level = max(qualified_levels, key=lambda level: level.get("threshold", 0))
+    return highest_level.get("rank", 0)
 
-    user_badge.progress += increment
-
-    # Determine the highest progression level the user qualifies for
-    best_level = None
-    best_color = None
-
-    for level in sorted(badge.progression, key=lambda x: x['threshold']):
-        if user_badge.progress >= level['threshold']:
-            best_level = level['level']
-            best_color = level['color']
-        else:
-            break
-
-    # Update if new level/color earned
-    if best_level != user_badge.level or best_color != user_badge.color:
-        user_badge.level = best_level
-        user_badge.color = best_color
-        # Optionally: send notification or track achievement here
-
-    db.session.commit()
+def update_max_favorites(user):
+    rank = sum(get_rank_for_user_badge(badge) for badge in user.user_badges)
 
 
-def random_point_near_vancouver(radius_km=40):
-    # Vancouver's coordinates
-    center_lat = 49.2827
-    center_lng = -123.1207
+    if rank >= 50:
+        new_max = 100
+    elif rank >= 40:
+        new_max = 90
+    elif rank >= 30:
+        new_max = 80
+    elif rank >= 25:
+        new_max = 70
+    elif rank >= 20:
+        new_max = 60
+    elif rank >= 15:
+        new_max = 50
+    elif rank >= 10:
+        new_max = 40
+    elif rank >= 5:
+        new_max = 25
+    elif rank >= 3:
+        new_max = 15
+    else:
+        new_max = 10
 
-    # Convert radius from km to degrees
-    radius_deg = radius_km / 111  # approx 111 km per degree of latitude
+    old_max = user.max_favorites
+    user.max_favorites = new_max
 
-    # Generate a random point within the circle
-    u = random.random()
-    v = random.random()
-    w = radius_deg * math.sqrt(u)
-    t = 2 * math.pi * v
-    x = w * math.cos(t)
-    y = w * math.sin(t)
-
-    # Adjust the x-coordinate for the shrinking of the east-west distances
-    new_lat = center_lat + y
-    new_lng = center_lng + x / math.cos(math.radians(center_lat))
-
-    return new_lat, new_lng
+    return {
+        "old": old_max,
+        "new": new_max,
+        "delta": new_max - old_max
+    }
 
 def evaluate_badge_progress(user, badge_name, increment=1, explicit_progress=None):
     badge = Badge.query.filter_by(name=badge_name).first()
@@ -287,19 +316,91 @@ def evaluate_badge_progress(user, badge_name, increment=1, explicit_progress=Non
         user_badge.level = best_level
         user_badge.color = best_color
         level_up = True
+    
+    # Rank recalculation and max favorites update
+    favorites_info = update_max_favorites(user)
 
     db.session.commit()
 
-    if level_up:
-        return {
-            "badge_name": badge.name,
+    
+    # Set the session variable for the modal
+    if level_up or favorites_info["delta"] > 0:
+        session['new_badge_earned'] = {
             "title": badge.title,
-            "icon": badge.fa_icon,
             "level": best_level,
-            "color": best_color
+            "color": best_color,
+            "icon": badge.fa_icon,
+            "max_favorites_increase": favorites_info["delta"],
+            "new_max_favorites": favorites_info["new"]
         }
 
-    return None
+    return level_up
+
+
+def random_point_near_vancouver(radius_km=40):
+    # Vancouver's coordinates
+    center_lat = 49.2827
+    center_lng = -123.1207
+
+    # Convert radius from km to degrees
+    radius_deg = radius_km / 111  # approx 111 km per degree of latitude
+
+    # Generate a random point within the circle
+    u = random.random()
+    v = random.random()
+    w = radius_deg * math.sqrt(u)
+    t = 2 * math.pi * v
+    x = w * math.cos(t)
+    y = w * math.sin(t)
+
+    # Adjust the x-coordinate for the shrinking of the east-west distances
+    new_lat = center_lat + y
+    new_lng = center_lng + x / math.cos(math.radians(center_lat))
+
+    return new_lat, new_lng
+
+
+def get_visible_carts():
+    query = CollectiveCart.query
+
+    if not current_user.is_authenticated:
+        return query.filter(CollectiveCart.privacy == 'public')
+
+    # Get user's group IDs
+    user_group_ids = [group.id for group in current_user.groups]
+
+    return query.join(User).filter(
+        or_(
+            CollectiveCart.privacy == 'public',
+            CollectiveCart.privacy == 'user_only',
+            and_(
+                CollectiveCart.privacy == 'group_only',
+                User.groups.any(Group.id.in_(user_group_ids))
+            )
+        )
+    )
+
+def get_visible_carts_for_deal(deal_id):
+    query = CollectiveCart.query.filter_by(deal_id=deal_id)
+
+    if not current_user.is_authenticated:
+        return query.filter_by(privacy='public')
+
+    user_group_ids = [group.id for group in current_user.groups]
+
+    return query.filter(
+        db.or_(
+            CollectiveCart.privacy == 'public',
+            CollectiveCart.privacy == 'user_only',
+            db.and_(
+                CollectiveCart.privacy == 'group_only',
+                CollectiveCart.host.has(
+                    User.groups.any(Group.id.in_(user_group_ids))
+                )
+            )
+        )
+    )
+
 
 
 #create Items in Database from upc_corpus.csv on server init

@@ -1,14 +1,15 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, Response, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-from models import db, User, Product, Rating, Favorite, Comment, ProductStatus, Deal, APIUsage, Message, Group, GroupInvite, Badge, CollectiveCart, CartShare
+from models import db, User, Product, Rating, Favorite, Comment, ProductStatus, Deal, APIUsage, Message, Group, GroupInvite, Badge, UserBadge, CollectiveCart, CartShare
 from functools import wraps
 from datetime import datetime, timedelta
 import geopy, json, os, random, csv, requests
 from markupsafe import Markup
+import jwt
 import re
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy import func, or_
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
@@ -23,6 +24,7 @@ from langdetect import detect
 from io import StringIO
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from regional_dict import regional_dict
 
 from helpers import (
     login_required_with_redirect_back,
@@ -42,6 +44,9 @@ from helpers import (
     get_usage,
     enforce_rate_limit,
     get_paginated,
+    get_visible_carts,
+    get_visible_carts_for_deal,
+    get_login_streak,
     faker
 )
 
@@ -80,6 +85,51 @@ def not_in_english(text):
     except:
         return False, 'unknown'
 
+
+def get_user_region():
+    ip = get_client_ip()
+    try:
+        response = requests.get(f'https://ipapi.co/{ip}/country/')
+        country_code = response.text.strip()
+        if country_code == 'US':
+            return 'CA'
+    except Exception:
+        pass
+    return 'CA'
+
+@app.context_processor
+def inject_localization():
+    region = get_user_region()
+    localized_terms = regional_dict.get(region, regional_dict['US'])
+    return dict(t=localized_terms)
+
+@app.before_request
+def ensure_daily_login_usage():
+    if current_user.is_authenticated:
+        today = date.today()
+        user_id = current_user.get_id()
+
+        usage = APIUsage.query.filter_by(user_id=user_id, date=today).first()
+
+        if not usage:
+            usage = APIUsage(
+                user_id=user_id,
+                date=today,
+                login_count=1
+            )
+            db.session.add(usage)
+            db.session.commit()
+
+            streak = get_login_streak(current_user.get_id())
+            evaluate_badge_progress(current_user, 'loyal_member', increment=1, explicit_progress=streak)
+
+
+        elif usage.login_count != 1:
+            usage.login_count = 1
+            db.session.commit()
+
+            streak = get_login_streak(current_user.get_id())
+            evaluate_badge_progress(current_user, 'loyal_member', increment=1, explicit_progress=streak)
 
 @app.context_processor
 def inject_unread_message_count():
@@ -134,17 +184,12 @@ def initialize_database():
       db.session.add(user)
       db.session.commit()
 
-    #if User.query.count() <= 1:
-      #seed_users_with_interactions()
+    if User.query.count() <= 1:
+      seed_users_with_interactions()
 
     if Deal.query.count() <= 100:
       seed_deals()
 
-@app.before_request
-def reset_upc_flag():
-    # Only reset for non-API routes (i.e., normal page loads)
-    if not request.path.startswith('/api/'):
-        session['evaluated_upc'] = False
 
 
 # User loader
@@ -176,6 +221,16 @@ def products():
     per_page = 12
 
     products = Product.query.filter_by(status=ProductStatus.APPROVED).all()
+
+    show_hero = not query and (page == 1)
+    top_favorited_products = (
+        db.session.query(Product)
+        .outerjoin(Favorite)
+        .group_by(Product.upc)
+        .order_by(db.func.count(Favorite.id).desc())
+        .limit(5)
+        .all()
+    )
     
     if query:
         products = Product.query.filter(
@@ -194,6 +249,8 @@ def products():
     return render_template('products/products.html', 
         total_display=total, 
         db_total=db_total,
+        show_hero=show_hero, 
+        top_favorited_products=top_favorited_products,
         page=page,
         total_pages=total_pages, 
         pagination=pagination, 
@@ -349,9 +406,7 @@ def new_product():
         db.session.add(new_product)
         db.session.flush()
         if current_user.is_authenticated:
-          result = evaluate_badge_progress(current_user, 'hunter', increment=1, explicit_progress=len(current_user.products))
-          if result:
-              session['new_badge_earned'] = result
+          evaluate_badge_progress(current_user, 'hunter', increment=1, explicit_progress=len(current_user.products))
       
         db.session.flush()
 
@@ -379,7 +434,8 @@ def new_product():
 @app.route("/deal/<int:deal_id>")
 def deal_detail(deal_id):
     deal = Deal.query.get_or_404(deal_id)
-    return render_template("deals/deal_detail.html", deal=deal)
+    carts = get_visible_carts().filter(CollectiveCart.deal_id == deal_id).all()
+    return render_template("deals/deal_detail.html", deal=deal, carts=carts)
 
 #PRODUCT NEW DEAL
 @app.route("/product/<string:upc>/new_deal", methods=["GET", "POST"])
@@ -423,13 +479,13 @@ def product_new_deal(upc):
                 )
                 db.session.add(new_deal)
                 db.session.flush() 
-                result1 = evaluate_badge_progress(current_user, 'deal_spotter', increment=1, explicit_progress=len(current_user.deals))
-                if result1:
-                    session['new_badge_earned'] = result1
+                
+                evaluate_badge_progress(current_user, 'deal_spotter', increment=1, explicit_progress=len(current_user.deals))
+                
                 users_to_notify = product.favorited_by_to_alert(new_deal)
-                result2 = evaluate_badge_progress(current_user, 'megaphone', increment=1, explicit_progress=len(users_to_notify))
-                if result2:
-                    session['new_badge_earned'] = result2
+                
+                evaluate_badge_progress(current_user, 'megaphone', increment=1, explicit_progress=len(users_to_notify))
+                    
                 for user in users_to_notify:
                     deal_url = url_for('deal_detail', deal_id=new_deal.id, _external=True)
                     msg = Message(
@@ -521,8 +577,7 @@ def dashboard_groups():
 @app.route('/dashboard/carts')
 @login_required
 def dashboard_carts():
-
-    carts = CollectiveCart.query.filter_by(host_id=current_user.id, deleted=False).all()
+    carts = get_visible_carts().filter_by(id=current_user.id, deleted=False).all()
 
     shares = CartShare.query.filter_by(user_id=current_user.id, deleted=False).all()
     shares_count = {}
@@ -710,6 +765,64 @@ def reject_suggestion(product_upc):
     flash(f"Product '{product.name}' rejected and deleted.", "info")
     return redirect(url_for("dashboard_suggestions"))
 
+@app.route('/delete_flagged_item', methods=['POST'])
+@login_required
+def delete_flagged_item():
+    item_type = request.form.get('item_type')  # 'product' or 'deal'
+    item_id = request.form.get('item_id')
+    reporting_user_ids_str = request.form.get('reporting_user_ids', '')
+    
+    if not item_type or not item_id:
+        flash("Invalid request.", "error")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    # Parse reporting user IDs, assuming comma-separated
+    reporting_user_ids = [int(uid) for uid in reporting_user_ids_str.split(',') if uid.isdigit()]
+
+    # Delete the flagged item from DB
+    if item_type == 'product':
+        # Delete product and its flags (your deletion logic here)
+        product = Product.query.get(item_id)
+        if product:
+            # Example: product.delete() or remove flags, etc.
+            # Make sure to cascade deletes if needed.
+            for deal in product.deals:
+                for cart in deal.collective_carts:
+                    CartShare.query.filter_by(cart_id=cart.id).delete()
+                CollectiveCart.query.filter_by(deal_id=deal.id).delete()
+            Deal.query.filter_by(product_id=product.upc).delete()
+            Rating.query.filter_by(product_upc=product.upc).delete()
+            Favorite.query.filter_by(product_upc=product.upc).delete()
+
+            db.session.delete(product)
+    elif item_type == 'deal':
+        # Delete deal and its flags (your deletion logic here)
+        deal = Deal.query.get(item_id)
+        if deal:
+            db.session.delete(deal)
+    else:
+        flash("Unknown item type.", "error")
+        return redirect(request.referrer or url_for('dashboard'))
+
+    # Award badge progression to reporting users
+    for uid in reporting_user_ids:
+        user = User.query.get(uid)
+        if user:
+            # Your function to award progression, e.g.:
+            send_msg = evaluate_badge_progress(user, 'curator', increment=1)
+
+            if send_msg:
+                message_text = (
+                    f"🔥 You've helped keep our database clean! You've unlocked a new level in your **Data Curator** badge: "
+                    "Keep it up - our site is more useful if the information is real! 💫"
+                )
+
+                db.session.add(Message(receiver_id=user.id, content=message_text))
+    db.session.commit()
+
+    flash(f"{item_type.capitalize()} deleted and reporters awarded progression.", "success")
+    return redirect(request.referrer or url_for('dashboard'))
+
 #DISCOVERY
 @app.route('/discover')
 def discover():
@@ -758,14 +871,17 @@ def discover():
             potential_groups, pages, total_pages, total_display = get_paginated(potential_groups, page, per_page=12)
     else:
         if current_user.is_authenticated:
-            nearby_users = current_user.nearby_users(radius_km=40)
             nearby_deals = current_user.nearby_deals(radius_km=40)
+            for deal in nearby_deals:
+                deal.visible_carts = get_visible_carts_for_deal(deal.id).limit(3).all()
+
             nearby_deals, pages, total_pages, total_display = get_paginated(nearby_deals, page, per_page=60)
             user_lat = current_user.latitude 
             user_lng = current_user.longitude
         else:
-            nearby_users = ''
             nearby_deals = Deal.query.all()
+            for deal in nearby_deals:
+                deal.visible_carts = get_visible_carts_for_deal(deal.id).limit(3).all()
             nearby_deals, pages, total_pages, total_display = get_paginated(nearby_deals, page, per_page=60)
             user_lat = 49.2350654 
             user_lng = -123.025867
@@ -780,7 +896,6 @@ def discover():
                            user_lat=user_lat,
                            user_lng=user_lng,
                            recommended_products=recommended_products,
-                           nearby_users=nearby_users,
                            potential_groups=potential_groups,
                            nearby_deals=nearby_deals,
                            url_builder=url_builder)
@@ -789,13 +904,12 @@ def discover():
 @app.route('/api/check_upc/<upc>')
 def check_upc(upc):
     product = Product.query.filter_by(upc=upc).first()
+    scan_count = int(request.args.get('scan_count', 1))
 
-    if current_user.is_authenticated and not session.get('evaluated_upc'):
-        session['evaluated_upc'] = True  # Prevent further increments this scan
-        result = evaluate_badge_progress(current_user, 'scanner', increment=1)
-        if result:
-            session['new_badge_earned'] = result
-
+    if current_user.is_authenticated and scan_count <= 1:
+        
+        evaluate_badge_progress(current_user, 'scanner', increment=1)
+        
     if product:
         return jsonify({
             'exists': True,
@@ -814,7 +928,7 @@ def check_upc(upc):
 def lookup_upc(upc):
     ip = get_client_ip()
     usage = get_usage(ip)
-    rate_limit_response = enforce_rate_limit(usage, ip)
+    rate_limit_response = enforce_rate_limit(type='lookup', daily_limit=5)
     if rate_limit_response:
         return jsonify({"error": "Rate limit exceeded"}), 404
     # Try Open Food Facts first
@@ -1093,10 +1207,8 @@ def rate(upc):
 
     ratings = Rating.query.filter_by(user_id=current_user.id).all()
 
-    result = evaluate_badge_progress(current_user, 'opinion', increment=1, explicit_progress=len(ratings))
-    if result:
-        session['new_badge_earned'] = result
-
+    evaluate_badge_progress(current_user, 'opinion', increment=1, explicit_progress=len(ratings))
+    
     
     return redirect(request.referrer or url_for('index'))
 
@@ -1110,6 +1222,10 @@ def rate_deal(deal_id):
     else:
         db.session.add(Rating(user_id=current_user.id, deal_id=deal_id, score=score))
     db.session.commit()
+
+    ratings = Rating.query.filter_by(user_id=current_user.id).all()
+
+    evaluate_badge_progress(current_user, 'opinion', increment=1, explicit_progress=len(ratings))
     
     return redirect(request.referrer or url_for('index'))
 
@@ -1124,17 +1240,17 @@ def favorite(upc):
     db.session.add(Favorite(user_id=current_user.id, product_upc=upc, to_alert=current_user.default_fav_alert))
     db.session.flush()
     fav_count = db.session.query(Favorite).filter_by(user_id=current_user.id).count()
-    result = evaluate_badge_progress(current_user, 'pantry', increment=1, explicit_progress=fav_count)
-    if result:
-        session['new_badge_earned'] = result
+    
+    evaluate_badge_progress(current_user, 'pantry', increment=1, explicit_progress=fav_count)
+    
     if product.user and product.user.id != current_user.id:
         fav_count = db.session.query(Favorite).join(Product).filter(Product.user_id == product.user.id).count()
 
-        send_msg =evaluate_badge_progress(product.user, 'trend_starter', increment=1, explicit_progress=fav_count)
+        send_msg = evaluate_badge_progress(product.user, 'trend_starter', increment=1, explicit_progress=fav_count)
+
         if send_msg:
             message_text = (
                 f"🔥 Your product is trending! You've unlocked a new level in your **Trend Starter** badge: "
-                f"**{send_msg['level']}**.\n\n"
                 "That means your product has been favorited by others — you're setting the trend! 💫"
             )
 
@@ -1198,39 +1314,96 @@ def update_deal_distance():
 
 
 @app.route('/deal/<deal_id>/carts')
-@login_required
 def deal_carts(deal_id):
     deal = Deal.query.filter_by(id=deal_id).first()
-    return render_template('deals/deal_carts.html', deal=deal)
+    carts = get_visible_carts().filter(CollectiveCart.deal_id == deal_id).all()
+    return render_template('deals/deal_carts.html', deal=deal, carts=carts)
 
 
-from flask import request, redirect, flash, url_for
 
 @app.route('/cart/<int:cart_id>', methods=['GET', 'POST'])
 @login_required
 def cart_detail(cart_id):
     cart = CollectiveCart.query.get_or_404(cart_id)
+    is_pickup_day = cart.pickup_date == date.today()
+
+    # Define badge color map
+    color_map = {
+        'gray': 'bg-gray-400',
+        'blue': 'bg-blue-700',
+        'purple': 'bg-purple-700',
+        'gold': 'bg-yellow-500',
+        'silver': 'bg-gray-300',
+        'bronze': 'bg-yellow-600',
+        'light-blue': 'bg-blue-300',
+        'red': 'bg-red-600',
+        'teal': 'bg-teal-600',
+        'yellow': 'bg-yellow-600',
+        'pink': 'bg-pink-600',
+        'indigo': 'bg-indigo-700'
+    }
+
+    # Get all badge definitions
+    badges = Badge.query.all()
+
+    # Get all users in the cart who have shares (and are not deleted)
+    participant_user_ids = [
+        share.user_id for share in cart.shares if share.user_id is not None and not share.deleted
+    ]
+
+    # Query user badges for those users
+    user_badges = UserBadge.query.filter(UserBadge.user_id.in_(participant_user_ids)).all()
+
+    # Build nested dict: {user_id: {badge_id: user_badge}}
+    user_badges_dicts = {}
+    for ub in user_badges:
+        user_badges_dicts.setdefault(ub.user_id, {})[ub.badge_id] = ub
 
     if request.method == 'POST':
-        # Has the user already requested or claimed a share?
-        existing_user_share = CartShare.query.filter_by(cart_id=cart.id, user_id=current_user.id, deleted=False).first()
-        if existing_user_share:
-            flash('You already have a share request or claim in this cart.', 'info')
+        requested_shares = int(request.form.get('requested_shares', 1))
+        requested_shares = max(1, min(requested_shares, cart.max_shares))
+
+        existing_user_shares = CartShare.query.filter_by(cart_id=cart.id, user_id=current_user.id, deleted=False).count()
+        remaining_quota = cart.max_shares - existing_user_shares
+
+        if remaining_quota <= 0:
+            flash(f"You've already requested the maximum of {cart.max_shares} shares for this cart.", 'info')
         else:
-            # Find first unclaimed share (i.e. placeholder)
-            available_share = CartShare.query.filter_by(cart_id=cart.id, user_id=None, deleted=False).first()
+            shares_to_request = min(requested_shares, remaining_quota)
 
-            if available_share:
-                available_share.user_id = current_user.id
-                available_share.approved = False  # Host will later approve
-                db.session.commit()
-                flash('Your share request has been submitted. Awaiting host approval.', 'success')
-            else:
+            available_shares = CartShare.query.filter_by(cart_id=cart.id, user_id=None, deleted=False).limit(shares_to_request).all()
+
+            if not available_shares:
                 flash('No available shares remain in this cart.', 'danger')
+            else:
+                for share in available_shares:
+                    share.user_id = current_user.id
+                    share.approved = False
 
-        return redirect(url_for('cart_detail', cart_id=cart.id))
+                db.session.commit()
+                flash(f'{len(available_shares)} share request(s) submitted. Awaiting host approval.', 'success')
 
-    return render_template('carts/cart_detail.html', cart=cart, user=current_user)
+        # POST returns the same template as GET
+        return render_template(
+            'carts/cart_detail.html',
+            cart=cart,
+            user=current_user,
+            badges=badges,
+            user_badges_dicts=user_badges_dicts,
+            color_map=color_map,
+            is_pickup_day=is_pickup_day
+        )
+
+    # GET method
+    return render_template(
+        'carts/cart_detail.html',
+        cart=cart,
+        user=current_user,
+        badges=badges,
+        user_badges_dicts=user_badges_dicts,
+        color_map=color_map,
+        is_pickup_day=is_pickup_day
+    )
 
 
 
@@ -1349,6 +1522,68 @@ def reject_share(share_id):
     flash('Share rejected and removed.')
     return redirect(url_for('cart_detail', cart_id=share.cart.id))
 
+@app.route('/cartshare/<int:share_id>/qr')
+@login_required
+def generate_cartshare_qr(share_id):
+    share = CartShare.query.get_or_404(share_id)
+    if share.user_id != current_user.id and not share.fulfilled_at:
+        abort(403)
+
+    payload = {
+        'share_id': share.id,
+        'user_id': current_user.id
+    }
+
+    qr_code_data = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+    return render_template('carts/cartshare_qr.html', qr_data=qr_code_data, share=share)
+
+@app.route('/fulfill_scan/<int:share_id>', methods=['GET'])
+@login_required
+def render_fulfillment_scanner(share_id):
+    share = CartShare.query.get_or_404(share_id)
+    cart = CollectiveCart.query.get_or_404(share.cart_id)
+
+    if cart.host_id != current_user.id:
+        abort(403)
+
+    return render_template('carts/fulfill_scanner.html', expected_share_id=share_id, share=share)
+
+@app.route('/fulfill_share', methods=['POST'])
+@login_required
+def fulfill_share():
+    token = request.json.get('scanned_token')
+    expected_share_id = request.json.get('expected_share_id')
+
+    if not token or not expected_share_id:
+        return jsonify({'success': False, 'message': 'Missing QR code or expected share ID'}), 400
+
+    try:
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        scanned_share_id = int(payload.get('share_id'))
+        scanned_user_id = int(payload.get('user_id'))
+    except Exception as e:
+        return jsonify({'success': False, 'message': 'Invalid QR code'}), 400
+
+    # Must match expected ID to prevent replay attack
+    if scanned_share_id != int(expected_share_id):
+        return jsonify({'success': False, 'message': 'Mismatched share ID'}), 400
+
+    share = CartShare.query.get_or_404(scanned_share_id)
+    cart = CollectiveCart.query.get_or_404(share.cart_id)
+
+    if cart.host_id != current_user.id:
+        return jsonify({'success': False, 'message': 'Only the host can fulfill this share'}), 403
+
+    if share.fulfilled_at:
+        return jsonify({'success': False, 'message': 'Share already fulfilled'}), 200
+
+    share.fulfilled_at = datetime.utcnow()
+    share.is_fulfilled = True
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Share successfully fulfilled!'})
+
+
 
 @app.route("/faq")
 def faq():
@@ -1416,30 +1651,74 @@ def message_detail(message_id):
 
     return render_template('messages/detail.html', message=message)
 
-# Create a message (sending)
 @app.route('/messages/create', methods=['GET', 'POST'])
 @login_required
 def message_create():
+    # --- Compute allowed recipients ---
+    group_user_ids = db.session.query(GroupInvite.user_id).filter_by(
+        invited_by=current_user.id, accepted=True
+    ).union(
+        db.session.query(GroupInvite.invited_by).filter_by(user_id=current_user.id, accepted=True)
+    ).subquery()
+
+    group_users = User.query.filter(User.id.in_(group_user_ids)).all()
+
+    active_shares = CartShare.query.join(CollectiveCart).filter(
+        CollectiveCart.is_fulfilled == False,
+        CollectiveCart.deleted == False,
+    ).all()
+
+    related_user_ids = set()
+    for share in active_shares:
+        cart = share.cart
+        if cart.host_id == current_user.id and share.user_id != current_user.id:
+            related_user_ids.add(share.user_id)
+        elif share.user_id == current_user.id and cart.host_id != current_user.id:
+            related_user_ids.add(cart.host_id)
+
+    cart_users = User.query.filter(User.id.in_(related_user_ids)).all()
+
+    allowed_recipients = {user.username: user for user in group_users + cart_users}
+    allowed_usernames = list(allowed_recipients.keys())
+
+    # --- Optional prefill logic ---
+    prefill_user = None
+    user_id = request.args.get('user_id', type=int)
+    if user_id:
+        user = User.query.get(user_id)
+        if user and user.username in allowed_usernames:
+            prefill_user = user
+        else:
+            flash("You are not allowed to message this user.", "danger")
+            return redirect(request.referrer or url_for('messages_inbox'))
+
+    # --- Form submission logic ---
     if request.method == 'POST':
         receiver_username = request.form.get('receiver_username')
-        content = request.form.get('content')
+        content = request.form.get('content', '').strip()
 
-        receiver = User.query.filter_by(username=receiver_username).first()
-        if not receiver:
-            flash("Receiver not found.", "danger")
+        if receiver_username not in allowed_usernames:
+            flash("You are not allowed to message this user.", "danger")
             return redirect(url_for('message_create'))
 
         if not content:
             flash("Message content cannot be empty.", "danger")
             return redirect(url_for('message_create'))
 
+        receiver = allowed_recipients[receiver_username]
         msg = Message(sender_id=current_user.id, receiver_id=receiver.id, content=content)
         db.session.add(msg)
         db.session.commit()
         flash("Message sent!", "success")
         return redirect(url_for('messages_inbox'))
 
-    return render_template('messages/create.html')
+    return render_template(
+        'messages/create.html',
+        allowed_recipients=allowed_recipients.values(),
+        prefill_user=prefill_user
+    )
+
+
 
 # Delete a message (only if current user is sender or receiver)
 @app.route('/messages/<int:message_id>/delete', methods=['POST'])
@@ -1469,8 +1748,13 @@ def accept_invite(invite_id):
     invite.deleted = False  # Ensure undeleted if already soft-declined
     db.session.commit()
 
+    accepted_group_count = GroupInvite.query.filter_by(user_id=current_user.id, accepted=True).count()
+    
+    evaluate_badge_progress(current_user, 'community_builder', increment=1, explicit_progress=accepted_group_count)
+    
+
     flash("You've joined the group!", "success")
-    return redirect(url_for('groups_detail', group_id=invite.group_id))
+    return redirect(url_for('group_detail', group_id=invite.group_id))
 
 
 @app.route('/invite/<int:invite_id>/decline', methods=['POST'])
@@ -1552,17 +1836,23 @@ def create_group():
     db.session.add(group)
     db.session.flush()
 
-    invitation = GroupInvite(group_id=group.id, user_id=current_user.id, accepted=True)
+
+    invitation = GroupInvite(group_id=group.id, user_id=current_user.id, invited_by=current_user.id, accepted=True)
     db.session.add(invitation)
+    db.session.flush()
+
+    accepted_group_count = GroupInvite.query.filter_by(user_id=current_user.id, accepted=True).count()
+    
+    evaluate_badge_progress(current_user, 'community_builder', increment=1, explicit_progress=accepted_group_count)
     
     for user_id in selected_user_ids:
-        invitation = GroupInvite(group_id=group.id, user_id=user_id)
+        invitation = GroupInvite(group_id=group.id, user_id=user_id, invited_by=current_user.id)
         db.session.add(invitation)
         message = Message(
                         sender_id=None,
                         receiver_id=user_id,
                         content=(
-                            f"New Goroup Invitation! \n\n" 
+                            f"New Group Invitation! \n\n" 
                             f"Check it out in your dashboard."
                             )
                         )

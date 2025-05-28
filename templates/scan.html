@@ -79,6 +79,8 @@
     // Validate UPC/PLU codes (same as your regex)
     const validateUPC = code => /^(?:\d{4}|9\d{4}|\d{12,13})$/.test(code);
 
+
+let scanCounts = 0;
 function handleUPCSearch(code) {
   if (!validateUPC(code)) {
     resultEl.innerHTML = `<span class="text-red-600">Invalid code detected. Please scan a valid barcode or enter a UPC/PLU.</span>`;
@@ -89,7 +91,9 @@ function handleUPCSearch(code) {
     return;
   }
 
-  fetch(`/api/check_upc/${code}`)
+  scanCounts = scanCounts + 1;
+
+  fetch(`/api/check_upc/${code}?scan_count=${scanCounts}`)
     .then(res => res.json())
     .then(data => {
       const type = code.length <= 5 ? 'PLU' : 'UPC';

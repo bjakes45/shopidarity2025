@@ -1,15 +1,32 @@
 {% extends "dashboard/base.html" %}
 {% block dashboard %}
-  <h2>Send Message</h2>
-  <form method="post">
-    <label for="receiver_username">To (username):</label><br />
-    <input type="text" id="receiver_username" name="receiver_username" required><br />
+<h2 class="text-xl font-bold mb-4">Send a Message</h2>
+<p class="mb-4 text-gray-600 text-sm">
+  You can message users who are either:<br />
+  - Members of a group you're both part of, or<br />
+  - Participants in a shared Collective Cart, where one is host and the other a participant.
+</p>
 
-    <label for="content">Message:</label><br />
-    <textarea id="content" name="content" rows="5" required></textarea><br />
+<form method="post" class="space-y-4">
+  <div>
+    <label for="receiver_username" class="block font-medium">Select recipient:</label>
+    <select id="receiver_username" name="receiver_username" required class="w-full border rounded p-2">
+      <option value="" disabled {{ '' if prefill_user else 'selected' }}>Choose a user</option>
+      {% for user in allowed_recipients %}
+        <option value="{{ user.username }}" {% if prefill_user and prefill_user.id == user.id %}selected{% endif %}>
+          {{ user.username }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
 
-    <button type="submit">Send</button>
-  </form>
+  <div>
+    <label for="content" class="block font-medium">Message:</label>
+    <textarea id="content" name="content" rows="5" required class="w-full border rounded p-2"></textarea>
+  </div>
 
-  <a href="{{ url_for('messages_inbox') }}">Back to Inbox</a>
+  <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Send</button>
+</form>
+
+<a href="{{ url_for('messages_inbox') }}" class="text-blue-500 hover:underline mt-4 block">Back to Inbox</a>
 {% endblock %}

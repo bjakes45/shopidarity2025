@@ -14,13 +14,13 @@
     </p>
   </div>
 
-  {% if deal.collective_carts %}
+  {% if carts %}
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-      {% for cart in deal.collective_carts %}
+      {% for cart in carts %}
         <div class="bg-white rounded-2xl shadow p-6 flex flex-col justify-between h-full">
           <div>
             <a href="{{ url_for('cart_detail', cart_id=cart.id)}}">
-              <h3 class="text-xl font-semibold text-indigo-700 mb-2">${{ "%.2f"|format(cart.total_cost) }} Cart</h3>
+              <h3 class="text-xl font-semibold text-indigo-700 mb-2">${{ "%.2f"|format(cart.share_cost()) }} Cart</h3>
             </a>
             <ul class="text-gray-700 space-y-1 text-sm">
               <li><strong>Owner:</strong> {{ cart.owner.username if cart.owner else 'Anonymous' }}</li>
