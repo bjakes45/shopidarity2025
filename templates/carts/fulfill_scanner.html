@@ -74,7 +74,10 @@
         hasScanned = true;
         fetch('/fulfill_share', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': "{{ csrf_token() }}"
+        },
           body: JSON.stringify({
             scanned_share_id: code.data,
             expected_share_id: expectedShareId
