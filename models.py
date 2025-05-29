@@ -16,6 +16,7 @@ db = SQLAlchemy()
 
 class User(db.Model, UserMixin):
     #LOGIN CREDENTIALS
+    __tablename__ = 'user'
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
@@ -23,6 +24,8 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(200), nullable=False)
     admin = db.Column(db.Boolean, default=False)
     deleted = db.Column(db.Boolean, default=False)
+    is_first_login = db.Column(db.Boolean, default=True)
+
 
     
     #GEODATA
@@ -119,6 +122,11 @@ class User(db.Model, UserMixin):
 
         nearby.sort(key=lambda u: u.distance_km)
         return nearby
+
+    @property
+    def carts_joined(self):
+        return [share.cart for share in self.cart_shares if not share.deleted]
+
 
 
 class ProductStatus(Enum):
@@ -315,16 +323,30 @@ class Deal(db.Model):
 
     user = db.relationship('User', back_populates='deals')
     product = db.relationship('Product', back_populates='deals')
-    collective_carts = db.relationship('CollectiveCart', back_populates='deal', cascade="all, delete-orphan")
+    cart_deals = db.relationship('CartDeal', back_populates='deal', cascade='all, delete-orphan')
+    
+    @property
+    def carts(self):
+        return [cd.cart for cd in self.cart_deals]
 
     def average_rating(self):
         return db.session.query(func.avg(Rating.score)).filter_by(deal_id=self.id).scalar()
+
+class CartDeal(db.Model):
+    __tablename__ = 'cart_deal'
+    id = db.Column(db.Integer, primary_key=True)
+    cart_id = db.Column(db.Integer, db.ForeignKey('collective_cart.id'), nullable=False)
+    deal_id = db.Column(db.Integer, db.ForeignKey('deal.id'), nullable=False)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    cart = db.relationship('CollectiveCart', back_populates='cart_deals')
+    deal = db.relationship('Deal', back_populates='cart_deals')
+
 
 class CollectiveCart(db.Model):
     __tablename__ = 'collective_cart'
     __table_args__ = {'extend_existing': True}
     id = db.Column(db.Integer, primary_key=True)
-    deal_id = db.Column(db.Integer, db.ForeignKey('deal.id'), nullable=False)
     host_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     total_cost = db.Column(db.Float, nullable=False)
     share_count = db.Column(db.Integer, nullable=False)
@@ -347,12 +369,17 @@ class CollectiveCart(db.Model):
     payment_method = db.Column(db.String(50))  # 'cash', 'etransfer', 'venmo', etc.
 
     host = db.relationship('User', backref='hosted_collective_carts')
-    deal = db.relationship('Deal', back_populates='collective_carts')
+    cart_deals = db.relationship('CartDeal', back_populates='cart', cascade='all, delete-orphan')
+
     shares = db.relationship('CartShare', back_populates='cart', cascade="all, delete-orphan")
 
     @property
-    def product(self):
-        return self.deal.product if self.deal else None
+    def deals(self):
+        return [cd.deal for cd in self.cart_deals]
+
+    @property
+    def users(self):
+        return [share.user for share in self.shares if not share.deleted]
 
     def share_cost(self):
         return self.total_cost / self.share_count

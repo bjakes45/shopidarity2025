@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, Response, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
-from models import db, User, Product, Rating, Favorite, Comment, ProductStatus, Deal, APIUsage, Message, Group, GroupInvite, Badge, UserBadge, CollectiveCart, CartShare
+from models import db, User, Product, Rating, Favorite, Comment, ProductStatus, Deal, APIUsage, Message, Group, GroupInvite, Badge, UserBadge, CollectiveCart, CartShare, CartDeal
 from functools import wraps
 from datetime import datetime, timedelta
 import geopy, json, os, random, csv, requests
@@ -103,33 +103,6 @@ def inject_localization():
     localized_terms = regional_dict.get(region, regional_dict['US'])
     return dict(t=localized_terms)
 
-@app.before_request
-def ensure_daily_login_usage():
-    if current_user.is_authenticated:
-        today = date.today()
-        user_id = current_user.get_id()
-
-        usage = APIUsage.query.filter_by(user_id=user_id, date=today).first()
-
-        if not usage:
-            usage = APIUsage(
-                user_id=user_id,
-                date=today,
-                login_count=1
-            )
-            db.session.add(usage)
-            db.session.commit()
-
-            streak = get_login_streak(current_user.get_id())
-            evaluate_badge_progress(current_user, 'loyal_member', increment=1, explicit_progress=streak)
-
-
-        elif usage.login_count != 1:
-            usage.login_count = 1
-            db.session.commit()
-
-            streak = get_login_streak(current_user.get_id())
-            evaluate_badge_progress(current_user, 'loyal_member', increment=1, explicit_progress=streak)
 
 @app.context_processor
 def inject_unread_message_count():
@@ -185,11 +158,38 @@ def initialize_database():
       db.session.commit()
 
     #if User.query.count() <= 1:
-     # seed_users_with_interactions()
+      #seed_users_with_interactions()
 
     if Deal.query.count() <= 100:
       seed_deals()
 
+@app.before_request
+def ensure_daily_login_usage():
+    if current_user.is_authenticated:
+        today = date.today()
+        user_id = current_user.get_id()
+
+        usage = APIUsage.query.filter_by(user_id=user_id, date=today).first()
+
+        if not usage:
+            usage = APIUsage(
+                user_id=user_id,
+                date=today,
+                login_count=1
+            )
+            db.session.add(usage)
+            db.session.commit()
+
+            streak = get_login_streak(current_user.get_id())
+            evaluate_badge_progress(current_user, 'loyal_member', increment=1, explicit_progress=streak)
+
+
+        elif usage.login_count != 1:
+            usage.login_count = 1
+            db.session.commit()
+
+            streak = get_login_streak(current_user.get_id())
+            evaluate_badge_progress(current_user, 'loyal_member', increment=1, explicit_progress=streak)
 
 
 # User loader
@@ -430,11 +430,18 @@ def new_product():
 
     return render_template('products/new_product.html', upc=upc, usage=usage)
 
-#DEAL DETAIL
 @app.route("/deal/<int:deal_id>")
 def deal_detail(deal_id):
     deal = Deal.query.get_or_404(deal_id)
-    carts = get_visible_carts().filter(CollectiveCart.deal_id == deal_id).all()
+
+    # Find all carts connected to this deal via CartDeal
+    carts = (
+        get_visible_carts()
+        .join(CartDeal, CollectiveCart.id == CartDeal.cart_id)
+        .filter(CartDeal.deal_id == deal_id)
+        .all()
+    )
+
     return render_template("deals/deal_detail.html", deal=deal, carts=carts)
 
 #PRODUCT NEW DEAL
@@ -521,8 +528,17 @@ def dashboard():
     favorites = Favorite.query.filter_by(user_id=user_id).order_by(Favorite.timestamp.desc()).limit(3).all()
     ratings = Rating.query.filter_by(user_id=user_id).order_by(Rating.timestamp.desc()).limit(3).all()
     comments = Comment.query.filter_by(user_id=user_id).order_by(Comment.timestamp.desc()).limit(3).all()
+
+    # In your route handler
+    if current_user.is_first_login:
+      # Flip the flag to prevent showing the modal again
+      current_user.is_first_login = False
+      db.session.commit()
+      show_tutorial = True
+    else:
+      show_tutorial = False
     
-    return render_template('dashboard/dashboard.html', favorites=favorites, ratings=ratings, comments=comments)
+    return render_template('dashboard/dashboard.html', favorites=favorites, ratings=ratings, comments=comments, show_tutorial=show_tutorial)
 
 @app.route('/dashboard/badges')
 @login_required
@@ -775,22 +791,28 @@ def delete_flagged_item():
     # Parse reporting user IDs, assuming comma-separated
     reporting_user_ids = [int(uid) for uid in reporting_user_ids_str.split(',') if uid.isdigit()]
 
-    # Delete the flagged item from DB
     if item_type == 'product':
-        # Delete product and its flags (your deletion logic here)
         product = Product.query.get(item_id)
         if product:
-            # Example: product.delete() or remove flags, etc.
-            # Make sure to cascade deletes if needed.
             for deal in product.deals:
-                for cart in deal.collective_carts:
-                    CartShare.query.filter_by(cart_id=cart.id).delete()
-                CollectiveCart.query.filter_by(deal_id=deal.id).delete()
-            Deal.query.filter_by(product_id=product.upc).delete()
-            Rating.query.filter_by(product_upc=product.upc).delete()
-            Favorite.query.filter_by(product_upc=product.upc).delete()
+                # Delete CartShares for carts linked to this deal through CartDeal
+                cart_ids = db.session.query(CartDeal.cart_id).filter(CartDeal.deal_id == deal.id).subquery()
+            
+                CartShare.query.filter(CartShare.cart_id.in_(cart_ids)).delete(synchronize_session=False)
+   
+                # Delete CollectiveCarts linked to this deal via CartDeal
+                CollectiveCart.query.filter(CollectiveCart.id.in_(cart_ids)).delete(synchronize_session=False)
+
+                # Delete CartDeal links themselves
+                CartDeal.query.filter(CartDeal.deal_id == deal.id).delete(synchronize_session=False)
+        
+            # Now delete deals, ratings, favorites as before
+            Deal.query.filter_by(product_id=product.upc).delete(synchronize_session=False)
+            Rating.query.filter_by(product_upc=product.upc).delete(synchronize_session=False)
+            Favorite.query.filter_by(product_upc=product.upc).delete(synchronize_session=False)
 
             db.session.delete(product)
+
     elif item_type == 'deal':
         # Delete deal and its flags (your deletion logic here)
         deal = Deal.query.get(item_id)
@@ -1032,7 +1054,7 @@ def login():
         user = User.query.filter_by(username=request.form['username']).first()
         if user and check_password_hash(user.password, request.form['password']):
             login_user(user)
-            return redirect(url_for('products'))
+            return redirect(url_for('dashboard'))
         else:
             flash('Invalid username or password')
     return render_template('user_admin/login.html')
@@ -1309,10 +1331,16 @@ def update_deal_distance():
         return jsonify({"error": str(e)}), 400
 
 
-@app.route('/deal/<deal_id>/carts')
+@app.route('/deal/<int:deal_id>/carts')
 def deal_carts(deal_id):
-    deal = Deal.query.filter_by(id=deal_id).first()
-    carts = get_visible_carts().filter(CollectiveCart.deal_id == deal_id).all()
+    deal = Deal.query.get_or_404(deal_id)
+
+    # Get all cart IDs associated with this deal through CartDeal
+    cart_ids = db.session.query(CartDeal.cart_id).filter(CartDeal.deal_id == deal.id).subquery()
+
+    # Filter visible carts to only those linked to this deal
+    carts = get_visible_carts().filter(CollectiveCart.id.in_(cart_ids)).all()
+
     return render_template('deals/deal_carts.html', deal=deal, carts=carts)
 
 
@@ -1321,6 +1349,9 @@ def deal_carts(deal_id):
 @login_required
 def cart_detail(cart_id):
     cart = CollectiveCart.query.get_or_404(cart_id)
+    # Retrieve all deals linked to this cart through CartDeal
+    deals = [cd.deal for cd in cart.cart_deals]
+
     is_pickup_day = cart.pickup_date == date.today()
 
     # Define badge color map
@@ -1387,7 +1418,9 @@ def cart_detail(cart_id):
             badges=badges,
             user_badges_dicts=user_badges_dicts,
             color_map=color_map,
-            is_pickup_day=is_pickup_day
+            is_pickup_day=is_pickup_day,
+            deals=deals
+
         )
 
     # GET method
@@ -1398,7 +1431,8 @@ def cart_detail(cart_id):
         badges=badges,
         user_badges_dicts=user_badges_dicts,
         color_map=color_map,
-        is_pickup_day=is_pickup_day
+        is_pickup_day=is_pickup_day,
+        deals=deals
     )
 
 
@@ -1418,37 +1452,31 @@ def create_cart(deal_id):
             if share_count > MAX_SHARES:
                 flash(f"Share count cannot exceed {MAX_SHARES}", "danger")
                 return redirect(request.referrer or url_for('index'))
+
             privacy = request.form.get('privacy')
             pickup_date_str = request.form.get('pickup_date')
-            print(pickup_date_str)
             pickup_date = datetime.strptime(pickup_date_str, '%Y-%m-%d').date() if pickup_date_str else None
             pickup_time_str = request.form.get('pickup_time')
-            print(pickup_time_str)
             pickup_time = datetime.strptime(pickup_time_str, '%H:%M').time() if pickup_time_str else None
             payment_timing = request.form.get('payment_timing')
             payment_method = request.form.get('payment_method')
             description = request.form.get('host_notes')
+
             host_shares_raw = request.form.get('host_shares')
             host_shares = int(host_shares_raw) if host_shares_raw and host_shares_raw.isdigit() else 1
             if host_shares > share_count:
-                flash(f"Share Host Shares cannot exceed Share Count", "danger")
+                flash(f"Host Shares cannot exceed Share Count", "danger")
                 return redirect(request.referrer or url_for('index'))
 
             max_shares_raw = request.form.get('max_shares_per_user')
             max_shares = int(max_shares_raw) if max_shares_raw and max_shares_raw.isdigit() else None
 
-
             # Compute total cost
             base_price = deal.price
-            if add_tax:
-                total_cost = round(base_price * (1 + tax_rate / 100), 2)
-            else:
-                total_cost = base_price
+            total_cost = round(base_price * (1 + tax_rate / 100), 2) if add_tax else base_price
 
             # Create the cart
-
             new_cart = CollectiveCart(
-                deal_id=deal.id,
                 host_id=current_user.id,
                 total_cost=total_cost,
                 share_count=share_count,
@@ -1463,28 +1491,31 @@ def create_cart(deal_id):
                 max_shares=max_shares,
                 pickup_date=pickup_date,
                 pickup_time=pickup_time
-                )
+            )
 
             db.session.add(new_cart)
-            db.session.flush()  # get cart.id before creating shares
+            db.session.flush()  # Get new_cart.id before creating related entries
+
+            # Create CartDeal association
+            cart_deal = CartDeal(cart_id=new_cart.id, deal_id=deal.id)
+            db.session.add(cart_deal)
 
             # Create CartShares
             for i in range(share_count):
                 is_host = i < host_shares
-                user_id = current_user.id if is_host else None  # host is first, others are empty for now
-                approved = True if is_host else False  # host is first, others are empty for now
+                user_id = current_user.id if is_host else None
+                approved = is_host
 
                 share = CartShare(
                     cart_id=new_cart.id,
                     user_id=user_id,
-                    fulfilled=False,
+                    is_fulfilled=False,
                     approved=approved,
                     deleted=False
                 )
                 db.session.add(share)
 
             db.session.commit()
-
             flash("Cart created successfully!", "success")
             return redirect(url_for('cart_detail', cart_id=new_cart.id))
 
@@ -1494,6 +1525,7 @@ def create_cart(deal_id):
             return redirect(request.referrer or url_for('index'))
 
     return render_template('carts/create_cart.html', deal=deal)
+
 
 @app.route('/approve_share/<int:share_id>', methods=['POST'])
 @login_required
@@ -1878,40 +1910,40 @@ def create_group():
 def group_detail(group_id):
     group = Group.query.get_or_404(group_id)
     product = group.product
-    organizer = User.query.get_or_404(group.organizer_id)  # assuming relationship Group.organizer points to User
-    tab = request.args.get('tab', 'bulletin')  # default to 'bulletin'
+    organizer = User.query.get_or_404(group.organizer_id)
+    tab = request.args.get('tab', 'bulletin')
 
-    bulletin_posts = []  
-    deals = []          
-    carts = []          
-    # Accepted members (assuming GroupInvitation has accepted boolean)
+    bulletin_posts = []
+    deals = []
+    carts = []
+
+    # Accepted and pending invitations
     accepted_invitations = GroupInvite.query.filter_by(group_id=group.id, accepted=True).all()
     accepted_users = [inv.user for inv in accepted_invitations]
 
-    # Pending invitations
     pending_invitations = GroupInvite.query.filter_by(group_id=group.id, accepted=False).all()
     pending_users = [inv.user for inv in pending_invitations]
 
-      # Fetch the relevant data based on the selected tab for performance optimization (optional)
     if tab == 'bulletin':
-        bulletin_posts = []  # fetch bulletin posts for group
-        #bulletin_posts = get_bulletin_posts(group_id)
+        bulletin_posts = []  # You can plug in your bulletin logic here
     elif tab == 'deals':
+        # Get deals for accepted users matching the group’s product
         for user in accepted_users:
             user_deals = Deal.query.filter_by(user_id=user.id, product_id=product.upc).all()
             deals.extend(user_deals)
-        for user in accepted_users:
-            user_carts = (
-                db.session.query(CollectiveCart)
-                .join(Deal, CollectiveCart.deal_id == Deal.id)
-                .filter(
-                    CollectiveCart.host_id == user.id,
-                    Deal.product_id == product.upc
-                    )
-                .all()
-                )
-            carts.extend(user_carts)
 
+        # Get carts hosted by accepted users whose associated deals match the product
+        carts = (
+            db.session.query(CollectiveCart)
+            .join(CartDeal, CollectiveCart.id == CartDeal.cart_id)
+            .join(Deal, CartDeal.deal_id == Deal.id)
+            .filter(
+                CollectiveCart.host_id.in_([user.id for user in accepted_users]),
+                Deal.product_id == product.upc
+            )
+            .distinct()
+            .all()
+        )
 
     return render_template(
         'groups/group_detail.html',
@@ -1925,6 +1957,7 @@ def group_detail(group_id):
         bulletin_posts=bulletin_posts,
         tab=tab
     )
+
 
 
 if __name__ == '__main__':

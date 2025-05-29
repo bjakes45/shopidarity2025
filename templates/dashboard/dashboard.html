@@ -56,4 +56,64 @@
         {% endfor %}
       </ul>
     </section>
+
+    {% if show_tutorial %}
+<div 
+    x-data="{ open: true }" 
+    x-show="open" 
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+>
+    <div 
+        class="bg-white max-w-xl w-full mx-3 sm:mx-auto rounded-lg shadow-lg p-4 relative overflow-y-auto max-h-[85vh]"
+    >
+        <button @click="open = false" class="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600 text-lg">
+            &times;
+        </button>
+
+        <h2 class="text-xl font-semibold text-gray-800 mb-1.5">🎉 Welcome to Shopidarity!</h2>
+        <p class="text-gray-600 mb-3 text-sm">Start with 4 easy badges that unlock your full pantry power. Earn them in any order.</p>
+
+        <ol class="space-y-4 text-sm">
+
+            <!-- Badge 1 -->
+            <li class="border-l-4 border-blue-500 pl-3">
+                <h3 class="font-medium">🔍 Badge 1: Scanner</h3>
+                <p class="text-gray-700">Scan a product’s barcode to earn the <strong>Scanner</strong> badge.</p>
+                <a href="{{ url_for('scan') }}" class="text-blue-600 hover:underline">Open Scanner</a>
+            </li>
+
+            <!-- Badge 2 -->
+            <li class="border-l-4 border-purple-500 pl-3">
+                <h3 class="font-medium">🕵️ Badge 2: Product Hunter <span class="text-xs text-gray-500">(Bonus!)</span></h3>
+                <p class="text-gray-700">Can’t find a product? Add it to earn the <strong>Product Hunter</strong> badge.</p>
+            </li>
+
+            <!-- Badge 3 -->
+            <li class="border-l-4 border-pink-500 pl-3">
+                <h3 class="font-medium">❤️ Badge 3: Labelled Pantry</h3>
+                <p class="text-gray-700">Favourite a product to earn this badge. Start with 10 slots — unlock 25 with more badges!</p>
+            </li>
+
+            <!-- Badge 4 -->
+            <li class="border-l-4 border-yellow-500 pl-3">
+                <h3 class="font-medium">⭐ Badge 4: Refined Opinion</h3>
+                <p class="text-gray-700">Rate a product to earn the <strong>Refined Opinion</strong> badge.</p>
+                <a href="{{ url_for('products') }}" class="text-pink-600 hover:underline">Browse Products</a>
+            </li>
+
+        </ol>
+
+        <div class="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-600">
+            🔓 Earn 3 of 4 to increase to <strong>25 Max Favourites</strong><br>
+            🧭 See all badges on your <a href="{{ url_for('dashboard_badges') }}" class="text-blue-500 hover:underline">dashboard</a>.
+        </div>
+
+        <div class="text-right mt-3">
+            <button @click="open = false" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 text-sm rounded">
+                Got it, let’s go!
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

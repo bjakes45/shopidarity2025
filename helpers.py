@@ -10,11 +10,12 @@ from flask import flash, redirect, request, jsonify, session
 from flask_login import current_user
 from werkzeug.security import generate_password_hash,check_password_hash
 from sqlalchemy import or_, and_
+from sqlalchemy.orm import joinedload
 from faker import Faker
 from math import ceil
 from geopy.distance import geodesic
 
-from models import db, Product, Favorite, Rating, Deal, User, APIUsage, Badge, UserBadge, CollectiveCart, Group
+from models import db, Product, Favorite, Rating, Deal, User, APIUsage, Badge, UserBadge, CollectiveCart, Group, CartDeal
 
 faker = Faker()
 
@@ -361,38 +362,40 @@ def random_point_near_vancouver(radius_km=40):
 
 
 def get_visible_carts():
-    query = CollectiveCart.query
+    query = CollectiveCart.query.options(joinedload(CollectiveCart.host))
 
     if not current_user.is_authenticated:
         return query.filter(CollectiveCart.privacy == 'public')
 
-    # Get user's group IDs
     user_group_ids = [group.id for group in current_user.groups]
 
-    return query.join(User).filter(
+    return query.filter(
         or_(
             CollectiveCart.privacy == 'public',
             CollectiveCart.privacy == 'user_only',
             and_(
                 CollectiveCart.privacy == 'group_only',
-                User.groups.any(Group.id.in_(user_group_ids))
+                CollectiveCart.host.has(
+                    User.groups.any(Group.id.in_(user_group_ids))
+                )
             )
         )
     )
 
+
 def get_visible_carts_for_deal(deal_id):
-    query = CollectiveCart.query.filter_by(deal_id=deal_id)
+    query = CollectiveCart.query.join(CartDeal).filter(CartDeal.deal_id == deal_id)
 
     if not current_user.is_authenticated:
-        return query.filter_by(privacy='public')
+        return query.filter(CollectiveCart.privacy == 'public')
 
     user_group_ids = [group.id for group in current_user.groups]
 
     return query.filter(
-        db.or_(
+        or_(
             CollectiveCart.privacy == 'public',
             CollectiveCart.privacy == 'user_only',
-            db.and_(
+            and_(
                 CollectiveCart.privacy == 'group_only',
                 CollectiveCart.host.has(
                     User.groups.any(Group.id.in_(user_group_ids))
