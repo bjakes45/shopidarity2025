@@ -368,7 +368,7 @@ class CartShare(db.Model):
     cart_id = db.Column(db.Integer, db.ForeignKey('collective_cart.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     approved = db.Column(db.Boolean, default=False)
-    fulfilled = db.Column(db.Boolean, default=False)
+    is_fulfilled = db.Column(db.Boolean, default=False)
     fulfilled_at = db.Column(db.DateTime, nullable=True)
     deleted = db.Column(db.Boolean, default=False)
 

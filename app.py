@@ -620,11 +620,7 @@ def dashboard_suggestions():
         flash("Must be an Admin",'error')
 
     suggestions = Product.query.filter_by(status=ProductStatus.SUGGESTED).all()
-    api_usage = APIUsage.query.all()
-
-    api_calls = 0
-    for use in api_usage:
-        api_calls += use.count
+    
     return render_template("dashboard/suggestions.html", products=suggestions, api_calls=api_calls)
 
 @app.route("/suggestion/approve/<product_upc>", methods=["POST"])

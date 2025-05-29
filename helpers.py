@@ -22,7 +22,7 @@ def get_client_ip():
     return request.remote_addr
 
 def get_usage(ip):
-    usage = APIUsage.query.get(ip)
+    usage = APIUsage.query.filter_by(ip=ip).first()  # CORRECT: queries by IP column
     return usage
 
 def get_or_create_usage(user_id=None, ip=None):
