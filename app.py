@@ -637,7 +637,7 @@ def dashboard_suggestions():
 
     suggestions = Product.query.filter_by(status=ProductStatus.SUGGESTED).all()
     
-    return render_template("dashboard/suggestions.html", products=suggestions, api_calls=api_calls)
+    return render_template("dashboard/suggestions.html", products=suggestions)
 
 @app.route("/suggestion/approve/<product_upc>", methods=["POST"])
 @login_required
