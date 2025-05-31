@@ -410,8 +410,9 @@ def new_product():
       
         db.session.flush()
 
-        for offer in offers:
-            try:
+        if offers:
+          for offer in offers:
+              try:
                 deal = Deal(
                     product_id=new_product.upc,
                     price=offer.get("price"),
@@ -421,7 +422,7 @@ def new_product():
                     source="UPCitemDB"
                 )
                 db.session.add(deal)
-            except Exception as e:
+              except Exception as e:
                 print(f"Bad offer: {e}")
     
         db.session.commit()
@@ -831,7 +832,7 @@ def delete_flagged_item():
 
             if send_msg:
                 message_text = (
-                    f"🔥 You've helped keep our database clean! You've unlocked a new level in your **Data Curator** badge: "
+                    f"🔥 You've helped keep our database clean! You've unlocked a new level in your **Data Curator** badge"
                     "Keep it up - our site is more useful if the information is real! 💫"
                 )
 
@@ -1268,7 +1269,7 @@ def favorite(upc):
 
         if send_msg:
             message_text = (
-                f"🔥 Your product is trending! You've unlocked a new level in your **Trend Starter** badge: "
+                f"🔥 Your product is trending! You've unlocked a new level in your **Trend Starter** badge"
                 "That means your product has been favorited by others — you're setting the trend! 💫"
             )
 
@@ -1406,6 +1407,17 @@ def cart_detail(cart_id):
                 for share in available_shares:
                     share.user_id = current_user.id
                     share.approved = False
+                deal_url = url_for('cart_detail', cart_id=cart.id, _external=True)
+                msg = Message(
+                    sender_id=None,
+                    receiver_id=cart.host.id,
+                    content=(
+                        f"New request to join your Collective Cart:\n\n"
+                        f"Check it out here: {deal_url} \n\n"
+                        "This link will open in a new tab.\n"
+                        )
+                    )
+                db.session.add(msg)
 
                 db.session.commit()
                 flash(f'{len(available_shares)} share request(s) submitted. Awaiting host approval.', 'success')
@@ -1534,6 +1546,17 @@ def approve_share(share_id):
     if current_user.id != share.cart.host_id:
         abort(403)
     share.approved = True
+    deal_url = url_for('cart_detail', cart_id=share.cart.id, _external=True)
+    msg = Message(
+        sender_id=None,
+        receiver_id=share.user.id,
+        content=(
+            f"Your request to join a Collective Cart was approved!\n\n"
+            f"Check it out here: {deal_url} \n\n"
+            "This link will open in a new tab.\n"
+            )
+        )
+    db.session.add(msg)
     db.session.commit()
     flash('Share approved.')
     return redirect(url_for('cart_detail', cart_id=share.cart.id))

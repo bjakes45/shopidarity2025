@@ -46,9 +46,19 @@ class User(db.Model, UserMixin):
     ratings = db.relationship('Rating', back_populates='user', cascade='all, delete-orphan')
     comments = db.relationship('Comment', back_populates='user', cascade='all, delete-orphan')
     deals = db.relationship('Deal', back_populates='user')
-    groups = db.relationship('Group', back_populates='user')
     user_badges = db.relationship('UserBadge', backref='user')
-    
+    organized_groups = db.relationship('Group', back_populates='organizer', cascade='all, delete-orphan')
+    groups = db.relationship(
+        'Group',
+        secondary='group_invite',
+        primaryjoin="and_(User.id==GroupInvite.user_id, GroupInvite.accepted==True)",
+        secondaryjoin="and_(Group.id==GroupInvite.group_id, GroupInvite.accepted==True)",
+        foreign_keys="[GroupInvite.user_id, GroupInvite.group_id]",
+        back_populates='members'
+        )
+
+    cart_shares = db.relationship('CartShare', back_populates='user', cascade='all, delete-orphan')
+
     #METHODS
     def check_password(self, password):
         return check_password_hash(self.password, password)
@@ -126,6 +136,7 @@ class User(db.Model, UserMixin):
     @property
     def carts_joined(self):
         return [share.cart for share in self.cart_shares if not share.deleted]
+
 
 
 
@@ -400,7 +411,7 @@ class CartShare(db.Model):
     deleted = db.Column(db.Boolean, default=False)
 
 
-    user = db.relationship('User', backref='cart_shares')
+    user = db.relationship('User', back_populates='cart_shares')
     cart = db.relationship('CollectiveCart', back_populates='shares')
 
 
@@ -437,7 +448,16 @@ class Group(db.Model):
     radius_km = db.Column(db.Float, default=30.0)
 
     invites = db.relationship('GroupInvite', back_populates='group', cascade="all, delete-orphan")
-    user = db.relationship('User', backref='group')
+    organizer = db.relationship('User', back_populates='organized_groups')
+    members = db.relationship(
+        'User',
+        secondary='group_invite',
+        primaryjoin="and_(Group.id==GroupInvite.group_id, GroupInvite.accepted==True)",
+        secondaryjoin="and_(User.id==GroupInvite.user_id, GroupInvite.accepted==True)",
+        foreign_keys="[GroupInvite.group_id, GroupInvite.user_id]",
+        back_populates='groups'
+        )
+
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.utcnow)

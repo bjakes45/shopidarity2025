@@ -31,6 +31,10 @@
          class="py-2 px-4 {% if tab == 'members' %}font-semibold border-b-2 border-blue-500 text-blue-600{% else %}text-gray-500 hover:text-blue-600{% endif %}">
          Members
       </a>
+      <a href="{{ url_for('group_detail', group_id=group.id, tab='products') }}" 
+         class="py-2 px-4 {% if tab == 'products' %}font-semibold border-b-2 border-blue-500 text-blue-600{% else %}text-gray-500 hover:text-blue-600{% endif %}">
+         Products
+      </a>
     </nav>
   </div>
 
@@ -162,6 +166,53 @@
         <p class="text-gray-500 italic">No pending members found.</p>
       {% endif %}
     </section>
+    {% elif tab == 'products' %}
+<section id="group-products" class="space-y-6">
+  {% if not product_stats %}
+    <p class="text-gray-500 italic">No product data found for this group yet.</p>
+  {% else %}
+    <div class="space-y-4">
+
+      {% for item in product_stats %}
+        <div class="border p-4 rounded-lg shadow-sm hover:shadow-md transition">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-semibold">{{ item.product.name }}</h3>
+              <p class="text-sm text-gray-500">
+                {% if item.shared_count == item.total_members %}
+                  ✅ Group Favourite — all {{ item.total_members }} members favourited this
+                {% else %}
+                  🍀 Favourited by {{ item.shared_count }}/{{ item.total_members }} members
+                {% endif %}
+              </p>
+              {% if item.member_usernames %}
+                <p class="text-xs text-gray-400 mt-1">Seen by: {{ item.member_usernames | join(', ') }}</p>
+              {% endif %}
+            </div>
+
+            <form method="POST" action="{{ url_for('toggle_favourite', product_id=item.product.id) }}">
+              <input type="hidden" name="group_id" value="{{ group.id }}">
+              {% if current_user.id in item.user_ids %}
+                <button type="submit" class="px-3 py-1 text-sm rounded bg-gray-200 hover:bg-gray-300 text-gray-800" disabled>
+                  ⭐ Favourited
+                </button>
+              {% elif current_user.favourites_remaining <= 0 %}
+                <button type="submit" class="px-3 py-1 text-sm rounded bg-gray-100 text-gray-400 cursor-not-allowed" disabled>
+                  ❌ Limit Reached
+                </button>
+              {% else %}
+                <button type="submit" class="px-3 py-1 text-sm rounded bg-blue-100 hover:bg-blue-200 text-blue-700">
+                  ⭐ Add Favourite
+                </button>
+              {% endif %}
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+
+    </div>
+  {% endif %}
+</section>
 
   </div>
 {% endif %}
