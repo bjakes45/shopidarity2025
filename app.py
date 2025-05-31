@@ -383,9 +383,10 @@ def new_product():
 
         offers_raw = request.form.get('offers')
         try:
-            offers = json.loads(offers_raw) if offers_raw else None
+            offers = json.loads(offers_raw) if offers_raw else []
         except json.JSONDecodeError:
-            offers = None  # fallback if invalid
+            offers = []
+            flash("Invalid format in 'offers'. Skipping deal entries.", "warning")
         status = ProductStatus.APPROVED if is_logged_in else ProductStatus.SUGGESTED
         user_id = current_user.id if is_logged_in else None
 
@@ -413,6 +414,7 @@ def new_product():
         if offers:
           for offer in offers:
               try:
+
                 deal = Deal(
                     product_id=new_product.upc,
                     price=offer.get("price"),
